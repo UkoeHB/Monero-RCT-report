@@ -5,13 +5,13 @@ In the digital realm it is often trivial to make endless copies of information, 
 
 We can use crytographic tools to allow data registered in an easily accessible database - the blockchain - to be virtually immutable and unforgeable, with legitimacy that cannot be disputed by any party.
 \\ \newline
-Cryptocurrencies store transactions in the blockchain, which acts as a public ledger\footnote{In this context ledger just means a record of all currency creation and exchange events. Specifically, how much money was transferred in each event and to whom.} of all the currency operations that have been verified. Most cryptocurrencies store transactions in clear text, to facilitate verification of transactions by the community of users.
+Cryptocurrencies store transactions in the blockchain, which acts as a public ledger\footnote{In this context ledger just means a record of all currency creation and exchange events. Specifically, how much money was transferred in each event and to whom.} of all the currency operations. Most cryptocurrencies store transactions in clear text, to facilitate verification of transactions by the community of users.
 \\ \newline
 Clearly, an open blockchain defies any basic understanding of privacy, since it virtually {\em publicizes} the complete transaction histories of its users.
 \\ \newline
 To address the lack of privacy, users of cryptocurrencies such as Bitcoin can obfuscate transactions by using temporary intermediate addresses \cite{DBLP:journals/corr/NarayananM17}. However, with appropriate tools it is possible to analyze flows and to a large extent link true senders with receivers \cite{DBLP:journals/corr/ShenTuY15b, DK-police-tracing-btc, Andrew-Cox-Sandia}.
 
-In contrast, the cryptocurrency Monero (Moe-neh-row) attempts to tackle the issue of privacy by storing only stealth, single-use addresses for receipt of funds in the blockchain, and by authenticating the dispersal of funds in each transaction with ring signatures. With these methods there are no effective ways to link senders with receivers or trace the origin of funds \cite{Monero-intro}.
+In contrast, the cryptocurrency Monero (Moe-neh-row) attempts to tackle the issue of privacy by storing only single-use addresses for receipt of funds in the blockchain, and by authenticating the dispersal of funds in each transaction with ring signatures. With these methods there are no effective ways to link receivers or trace the origin of funds \cite{Monero-intro}.
 
 Additionally, transaction amounts in the Monero blockchain are concealed behind cryptographic constructions, rendering currency flows opaque.
 
@@ -23,10 +23,10 @@ The result is a cryptocurrency with a high level of privacy.
 \section{Objectives}
 \label{sec:goals}
 
-Monero is a cryptocurrency of recent creation \cite{bitmonero-launched} \cite{monero-history}, yet it displays a steady growth in popularity\footnote{\label{marketcap_note}As of December 28\nth, 2017, Monero occupies the 10\nth position as regards market capitalization, see\\ \url{https://coinmarketcap.com/}}. 
+Monero is a cryptocurrency of recent creation \cite{bitmonero-launched, monero-history}, yet it displays a steady growth in popularity\footnote{\label{marketcap_note}As of June 14\nth, 2018, Monero occupies the 14\nth position as regards market capitalization; see\\ \url{https://coinmarketcap.com/}}. 
 Unfortunately, there is little comprehensive documentation describing the mechanisms it uses. Even worse, important parts of its theoretical framework have been published in non peer-reviewed papers which are incomplete and/or contain errors. For significant parts of the theoretical framework of Monero, only the source code is reliable as a source of information.
 
-Moreover, for those without a background in mathematics, learning the basics of elliptic curve cryptography, which Monero uses extensively, can be a haphazard and frustrating endeavor.
+Moreover, for those without a background in mathematics, learning the basics of elliptic curve cryptography, which Monero uses extensively, can be a haphazard and frustrating endeavor.\footnote{A previous attempt to explain how Monero works did not elucidate elliptic curve cryptography, was incomplete, and is now almost four years outdated: \cite{MRL-0003}.}
 
 We intend to palliate this situation by introducing the fundamental concepts necessary to understand elliptic curve cryptography, reviewing algorithms and cryptographic schemes, and collecting in-depth information about Monero’s inner workings.
 
@@ -49,9 +49,9 @@ We have purposefully omitted, or delegated to footnotes, some mathematical techn
 
 The cryptocurrency Monero, originally known as BitMonero, was created in April, 2014 as a derivative of the proof-of-concept currency CryptoNote \cite{bitmonero-launched}. Monero means `money' in the language Esperanto, and its plural form is Moneroj (Moe-neh-rowje, similar to Moneros but using the -ge from orange).
 
-CryptoNote is a cryptocurrency devised by various individuals. A landmark whitepaper describing it was published under the pseudonym of Nicolas van Saberhagen in October 2013 \cite{cryptoNoteWhitePaper}. It offered receiver anonymity through the use of one-time addresses, and sender ambiguity by means of ring signatures.
+CryptoNote is a cryptocurrency devised by various individuals. A landmark whitepaper describing it was published under the pseudonym of Nicolas van Saberhagen in October, 2013 \cite{cryptoNoteWhitePaper}. It offered receiver anonymity through the use of one-time addresses, and sender ambiguity by means of ring signatures.
 
-Since its inception, Monero has further strengthened its privacy aspects by implementing amount hiding, as described by Greg Maxwell (among others) in \cite{Signatures2015BorromeanRS} and integrated into ring signatures based on Shen Noether's recommendations in \cite{ledger34}.
+Since its inception, Monero has further strengthened its privacy aspects by implementing amount hiding, as described by Greg Maxwell (among others) in \cite{Signatures2015BorromeanRS} and integrated into ring signatures based on Shen Noether's recommendations in \cite{MRL-0005}.
   
 
 \section{Outline}
@@ -67,14 +67,18 @@ In Chapter \ref{chapter:pedersen-commitments} we introduce the cryptographic mec
 
 With all the components in place, we explain the transaction schemes used in Monero in Chapter \ref{chapter:transactions}.
 
-We use Chapter \ref{chapter:multisignatures} to describe a multisignature method that allows multiple people to send and receive money collaboratively. %This is formally called (N-1)-of-N and N-of-N threshold authentication.
+We unfold the Monero blockchain in Chapter \ref{chapter:blockchain}.
 
-Finally, we unfold the Monero blockchain in Chapter \ref{chapter:blockchain}.
+While not essential to the operation of Monero, there is a lot of utility in multisignatures that allow multiple people to send and receive money collaboratively. Simple multisignatures (N-of-N and (N-1)-of-N, with naive key aggregation) are currently available in the source code. However, the Monero Research Lab is currently writing a technical paper on the subject, with several improvements and a security proof `in the works'. Readers can find our writeup (subject to change) on multisignatures here: \url{https://github.com/UkoeHB/Monero-RCT-report}, or look forward to its inclusion in future editions. %We devote Chapter \ref{chapter:multisignatures} to describing Monero's current multisignature approach, and to potential future developments in that area. %This is formally called (N-1)-of-N and N-of-N threshold authentication.
 
 Appendices \ref{appendix:RCTTypeFull} and \ref{appendix:RCTTypeSimple} explain the structure of sample transactions from the blockchain. Appendix \ref{appendix:block-content} explains the structure of blocks (including block headers and miner transactions) in Monero's blockchain, while Appendix \ref{appendix:genesis-block} brings our report to a close by explaining the structure of Monero's genesis block. These provide a connection between the theoretical elements described in earlier sections with their real-life implementation.
 
-We\marginnote{Isn't this useful?} use margin notes to indicate where Monero implementation details can be found in the source code. There is usually a file path, such as src/ringct/rctOpps.cpp, and a function, such as \(\textrm{signMultisig()}\). Note: any instance of `-' indicates split text, such as crypto- note $\rightarrow$ cryptonote.
+We\marginnote{Isn't this useful?} use margin notes to indicate where Monero implementation details can be found in the source code.\footnote{These margin notes are accurate for version 0.12.x.x of the Monero software suite, but may gradually become inaccurate as the code base is constantly changing. However, the code is stored in a git repository (\url{https://github.com/monero-project/monero}), so a complete history of changes is available.} There is usually a file path, such as src/ringct/rctSigs.cpp, and a function, such as \(\textrm{genBorromean()}\). Note: `-' indicates split text, such as crypto- note $\rightarrow$ cryptonote.
 
 \section{Disclaimer}
 
-All signature schemes, applications of elliptic curves, and Monero implementation details should be considered descriptive only. Readers considering serious practical applications (as opposed to a hobbyist's explorations) should consult original sources and technical specifications (which we have cited where possible). Signature schemes need well-vetted security proofs, and Monero implementation details can be found in Monero's source code.
+All signature schemes, applications of elliptic curves, and Monero implementation details should be considered descriptive only. Readers considering serious practical applications (as opposed to a hobbyist's explorations) should consult original sources and technical specifications (which we have cited where possible). Signature schemes need well-vetted security proofs, and Monero implementation details can be found in Monero's source code. In particular, as a common saying goes, `don't roll your own crypto'. Code implementing cryptographic primitives should be well reviewed by experts, and have a long history of solid performance.
+
+\section{History of Zero to Monero}
+
+Zero to Monero is an expansion of Kurt Alonso's master's thesis `Monero - Privacy in the Blockchain' \cite{kurt-original}.
