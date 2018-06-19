@@ -112,6 +112,7 @@
 \setlist[itemize]{topsep=0pt}
 \newcommand{\listspace}{-.4em}
 
+
 % ___________________________________________________________________________________________________________
 %
 %                  		PDF INFO
@@ -151,31 +152,39 @@
 
 
 \vfill{}
-{\par\centering \textsc{\LARGE Zero to Monero \\Privacy in the blockchain: First Edition \\\today{} Draft 0.20.0}\par}
+{\par\centering \textsc{\huge Zero to Monero: First Edition}\par}
+\smallskip
+{\par\centering \textsc{\LARGE a technical guide to a private digital currency; for beginners, amateurs, and experts}\par}
+\smallskip
+{\par\centering \textsc{\LARGE Published \today{} (v1.0.0)}\par}
+%{\par\centering \textsc{\LARGE \today{} Draft 0.20.9}\par}
 \bigskip
-{\par\centering \textsc{\large Kurt M. Alonso\footnote{\label{donation-request}Dear reader, \\
-Welcome to our report, we hope you enjoy it! \\ \\
-Do you feel Monero has enough documentation? \\ \\
-If you find this report valuable you can donate Monero (XMR), empowering us to keep this report up-to-date with new developments, to assemble new reports, and basically to survive, here:
-\vspace*{.1cm}\\
-\makebox[\textwidth][c]{43sHzpng7oFAUMrRzg5RSg2XoYQbCSRYBRt4PV61ByqwY9ovfRGqMenj3ZkEQEaXsf7edQtTitH5xKG3t27kkKafKX4oFzY}\vspace*{.1cm}\\\vspace*{.3cm}We can keep going with your support!\\\vspace*{.1cm}Please note this report is released into the public domain.}\footnote{kurt@oktav.se}}
-\par \textsc{\large koe$^{\ref{donation-request}, }$\footnote{ukoe@protonmail.com; for questions and comments, we recommend CC'ing both authors.} }\par}
+{\par\centering \textsc{\large Kurt M. Alonso} \\\underline{kurt@oktav.se}
+\par \textsc{\large koe} \\\underline{ukoe@protonmail.com}\par \par
+(for questions and comments, please CC both authors)\par}
 \vfill{}
 
 \begin{center}
-  \begin{minipage}[t]{0.8\columnwidth}
- 
-  
+  \begin{minipage}[t]{6.43in}
+This is a free resource: read, copy, print, or distribute as you wish.\\
+
+Documentation is scarce. Donating allows us to maintain this project as Monero changes and grows (e.g. bulletproofs), and to assemble new reports (e.g. Kovri). Your support makes a big difference.\\
+
+We hope you enjoy Zero to Monero!\vspace{.33cm}\\
+\newlength\stextwidth
+\settowidth{\stextwidth}{\footnotesize{43sHzpng7oFAUMrRzg5RSg2XoYQbCSRYBRt4PV61ByqwY9ovfRGqMenj3ZkEQEaXsf7edQtTitH5xKG3t27kkKafKX4oFzY}}
+\makebox[\textwidth][c]{\scriptsize{Monero (XMR) donation address} \phantom{\footnotesize{g2XoQbCSRYBRt4PV61ByqwY9ovfRGqMenj3ZkEQEaXsf7edQttH5xKG3t27kkKafKX4oFzY}}}\vspace{-.45cm}
+\makebox[\textwidth][c]{\rule{\stextwidth}{.4pt}}\vspace{-.15cm}
+\makebox[\textwidth][c]{\footnotesize{43sHzpng7oFAUMrRzg5RSg2XoYQbCSRYBRt4PV61ByqwY9ovfRGqMenj3ZkEQEaXsf7edQtTitH5xKG3t27kkKafKX4oFzY}}\vspace{-.35cm}
+\makebox[\textwidth][c]{\rule{\stextwidth}{.4pt}}
+\vspace{.117cm}\\
+\textbf{License}: Zero to Monero is released into the public domain.
   
   \end{minipage}
-%  \medskip
 \end{center}
-
-\vfill{}
+\vspace{0cm}
 % ------ Abstract ------------------------
 
-%\newpage
-%\mbox{}
 \newpage
 \pagestyle{empty}
 \begin{center}
@@ -197,7 +206,6 @@ If you find this report valuable you can donate Monero (XMR), empowering us to k
 \newpage
 \pagestyle{plain}
 \tableofcontents
-%\listoffigures
 
 % ___________________________________________________________________________________________________________
 %
@@ -215,9 +223,8 @@ If you find this report valuable you can donate Monero (XMR), empowering us to k
 \include{content/ring-signatures}
 \include{content/commitments}
 \include{content/Transactions}
-\include{content/multisig}
 \include{content/blockchain}
-
+%\include{content/multisig}
 
 % ___________________________________________________________________________________________________________
 %
