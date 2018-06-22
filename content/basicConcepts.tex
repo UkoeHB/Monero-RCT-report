@@ -408,7 +408,7 @@ Therefore the owner of $k_A$ (Alice) created $(c,r)$ for $\mathfrak{m}$: she sig
 \label{Ed25519_section}
 
 Monero uses a particular Twisted Edwards elliptic curve for cryptographic operations, {\em Ed25519}, the {\em birational equivalent}\footnote{\label{birational_note}Without giving further details, birational equivalence can be thought of as an isomorphism expressible using rational terms.} 
-of the Montogomery curve {\em Curve25519}.
+of the Montgomery curve {\em Curve25519}.
 
 Both Curve25519 and Ed25519 were released by Bernstein {\em et al.} \cite{Bernstein2008, Bernstein2012, Bernstein2007}.\footnote{Dr. Bernstein also developed an encryption scheme known as ChaCha \cite{Bernstein_chacha,chacha-irtf}, which the primary\marginnote{src/wallet/ ringdb.cpp} Monero implementation uses to encrypt certain sensitive information related to users' wallets.}
 
