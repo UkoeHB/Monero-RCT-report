@@ -1,62 +1,100 @@
-\chapter{Pedersen Commitments}
+\chapter{Monero Amount Hiding}
 \label{chapter:pedersen-commitments}
 
+In most cryptocurrencies like Bitcoin, transaction output notes, which give spending rights to `amounts' of money, communicate those amounts in clear text. This allows observers to easily verify the amount spent equals the amount sent.
 
-Generally speaking, a cryptographic {\em commitment scheme} is a way of committing to a value without revealing the value itself.
+In Monero we use {\em commitments} to hide output amounts from everyone except senders and receivers, while still giving observers confidence that a transaction sends no more or less than what is spent. As we will see, amount commitments must also have corresponding `range proofs' which prove the hidden amount is within a legitimate range.
 
-For example, in a coin-flipping game Alice could privately commit to one outcome (i.e. ‘call it’) before Bob flips the coin by publishing her committed value hashed with secret data. After Bob flips the coin, Alice could declare which value she committed to and prove it by publishing her secret data. Bob could then verify her claim.
 
-In other words, assume that Alice has a secret string $blah$ and the value she wants to commit to is $heads$. She could simply hash $h = \mathcal{H}(blah, heads)$ and give $h$ to Bob. Bob flips a coin, Alice tells Bob about $blah$ and informs him she committed to $heads$, and then Bob calculates $h’ = \mathcal{H}(blah, heads)$. If $h' = h$, then he knows Alice called $heads$ before the coin flip.
 
-Alice uses the so-called `salt' $blah$ so Bob can't just guess $\mathcal{H}(heads)$ and $\mathcal{H}(tails)$ before his coin flip, and figure out she committed to $heads$.
+\section{Commitments}
+\label{sec:commitments}
+
+Generally speaking, a cryptographic {\em commitment scheme} is a way of committing to a value without revealing the value itself. After committing to something, you are stuck with it.
+
+For example, in a coin-flipping game Alice could privately commit to one outcome (i.e. ‘call it’) by hashing her committed value with secret data and publishing the hash. After Bob flips the coin, Alice declares which value she committed to and proves it by revealing the secret data. Bob could then verify her claim.
+
+In other words, assume that Alice has a secret string $blah$ and the value she wants to commit to is $heads$. She hashes $h = \mathcal{H}(blah, heads)$ and gives $h$ to Bob. Bob flips a coin, then Alice tells Bob the secret string $blah$ and that she committed to $heads$. Bob calculates $h’ = \mathcal{H}(blah, heads)$. If $h' = h$, then he knows Alice called $heads$ before the coin flip.
+
+Alice uses the so-called `salt', $blah$, so Bob can't just guess $\mathcal{H}(heads)$ and $\mathcal{H}(tails)$ before his coin flip, and figure out she committed to $heads$.\footnote{If the committed value is very difficult to guess and check, e.g. if it's an apparently random elliptic curve point, then salting the commitment isn't necessary.}
+
+
 
 \section{Pedersen commitments}
 \label{pedersen_section}
 
-A {\em Pedersen commitment} \cite{Pedersen1992} is a commitment that has the property of being {\em additively homomorphic}. If \(C(a)\) and \(C(b)\) denote the commitments for values \(a\) and \(b\) respectively, then \(C(a + b) = C(a) + C(b)\).\footnote{Additively homomorphic in this context means addition is preserved when you transform scalars into EC points by applying, for scalar $x$, $x \rightarrow x G$.} This property is useful when committing transaction amounts, as one could prove, for instance, that inputs equal outputs, without revealing the amounts at hand.
+A {\em Pedersen commitment} \cite{Pedersen1992} is a commitment that has the property of being {\em additively homomorphic}. If \(C(a)\) and \(C(b)\) denote the commitments for values \(a\) and \(b\) respectively, then \(C(a + b) = C(a) + C(b)\).\footnote{Additively homomorphic in this context means addition is preserved when you transform scalars into EC points by applying, for scalar $x$, $x \rightarrow x G$.} This property will be useful when committing transaction amounts, as one can prove, for instance, that inputs equal outputs, without revealing the amounts at hand.
 \\
 
 Fortunately, Pedersen commitments are easy to implement with elliptic curve cryptography, as the following holds trivially \[a G + b G = (a + b) G\]
 
-Clearly, by defining a commitment as simply \(C(a) = a G\), we could easily create cheat tables of commitments to help us recognize common amounts $a$.
+Clearly, by defining a commitment as simply \(C(a) = a G\), we could easily create cheat tables of commitments to help us recognize common values of $a$.
 
-To attain information-theoretic privacy, one needs to add a secret {\em blinding factor} and another generator \(H\), such that it is unknown for which value of \(\gamma\) the following holds: \(H = \gamma G\). The hardness of the discrete logarithm problem ensures calculating $\gamma$ from $H$ is infeasible. In the case of Monero, $H = \mathcal{H}_p(G)$.\footnote{\label{hashtopoint_note}The\marginnote{src/ringct/ rctTypes.h} Monero codebase has a function $to\_point()$ that maps scalars to EC points. For commitments, $H = to\_point(\mathit{Keccak}(G))$.}%see rctTypes.h
+To attain information-theoretic privacy, one needs to add a secret {\em blinding factor} and another generator \(H\), such that it is unknown for which value of \(\gamma\) the following holds: \(H = \gamma G\). The hardness of the discrete logarithm problem ensures calculating $\gamma$ from $H$ is infeasible.\footnote{In the case of Monero\marginnote{src/ringct/ rctTypes.h}, $H = 8*to\_point(\mathcal{H}_n(G))$. This differs from the $\mathcal{H}_p$ hash function in that it directly interprets the output of $\mathcal{H}_n(G)$ as a compressed point coordinate instead of deriving a curve point mathematically (see \cite{hashtopoint-writeup}). The historical reasons for this discrepancy\marginnote{tests/unit\_ tests/ ringct.cpp {\tt TEST(ringct, HPow2)}} are unknown to us, and indeed this is the only place where $\mathcal{H}_p$ is not used (Bulletproofs also use $\mathcal{H}_p$). Note how there is a $*8$ operation, to ensure the resultant point is in our $l$ subgroup ($\mathcal{H}_p$ also does that).}
 
-We can then define the commitment to an amount \(a\) as \(C(x, a) = x G + a H\), where \(x\) is a blinding factor that prevents observers from guessing $a$ (for example: if you just commit $C(a=1)$, it is trivial to guess and check). 
+%In the case of Monero\marginnote{src/ringct/ rctTypes.h}, $H = \mathcal{H}_p(G)$.\footnote{\label{hashtopoint_note}Monero's unique hash to point function\marginnote{src/ringct/ rctOps.cpp {\tt hash\_to\_p3()}} (see \cite{hashtopoint-writeup}) is used in practice to turn the normal hash of one curve point directly into another curve point. For commitments, $H = hash\_to\_point(\mathit{Keccak}(G))$. }%see rctTypes.h
 
-Commitment $C(x, a)$ is information-theoretically private because there are many possible combinations of $x$ and $a$ that would output the same $C$.\footnote{Basically, there are many $x’$ and $a’$ such that $x’+a’ \gamma = x+a \gamma$. A committer knows one combination, but an attacker has no way to know which one. Furthermore, even the committer can't find another combination without solving the DLP for $\gamma$.} If $x$ is truly random, an attacker would have literally no way to figure out $a$ \cite{maxwell-ct, SCOZZAFAVA1993313}.%{https://people.xiph.org/~greg/confidential_values.txt}
-\\
+We can then define the commitment to a value \(a\) as \(C(x, a) = x G + a H\), where \(x\) is the blinding factor (a.k.a. `mask') that prevents observers from guessing $a$.
 
+Commitment $C(x, a)$ is information-theoretically private because there are many possible combinations of $x$ and $a$ that would output the same $C$.\footnote{Basically, there are many $x’$ and $a’$ such that $x’+a’ \gamma = x+a \gamma$. A committer knows one combination, but an attacker has no way to know which one. This property is also known as `perfect hiding' \cite{adam-zero-to-bulletproofs}. Furthermore, even the committer can't find another combination without solving the DLP for $\gamma$, a property called `computational binding' \cite{adam-zero-to-bulletproofs}.} If $x$ is truly random, an attacker would have literally no way to figure out $a$ \cite{maxwell-ct, SCOZZAFAVA1993313}.%{https://people.xiph.org/~greg/confidential_values.txt}
 
 
 
 \section{Amount commitments}
 \label{sec:pedersen_monero}
 
-Owning cryptocurrency is not like a bank account, where a person’s balance exists as a single value in a database. Rather, a person owns a bunch of transaction {\em outputs}. Each output has an `amount’, and the sum of amounts in all {\em unspent} outputs owned is considered a person’s balance.
+In Monero, output amounts are stored in transactions as Pedersen commitments. We define a commitment to an output’s amount $b$ as:\vspace{.175cm}
+\[C(y,b) = y G + b H\marginnote{src/ringct/ rctOps.cpp {\tt addKeys2()}}\]
 
-To send cryptocurrency to someone else, we create a transaction. A transaction references old outputs as {\em inputs} and addresses new outputs to recipients. Once an output has been referenced, i.e. `spent', it can never be referenced/spent again.
+Recipients should be able to know how much money is in each output they own, as well as reconstruct the amount commitments, so they can be used as the inputs to new transactions. This means the blinding factor $y$ and amount $b$ must be communicated to the receiver.
 
-Since it is rare for input amounts to equal intended output amounts, most transactions include `change’, an output that sends excess back to the sender. We will elaborate on these topics in Chapter \ref{chapter:transactions}.
-
-In Monero, transaction amounts are hidden using a technique called RingCT, first implemented in January, 2017 (v4 of the protocol). While transaction verifiers don’t know how much Monero is contained in each input and output, they still need to prove the sum of input amounts equals the sum of output amounts. 
-
-In other words, if we had a transaction with inputs containing amounts \(a_1, ..., a_m\) and outputs with amounts \(b_1, ..., b_p\), then an observer would justifiably expect that: \vspace{.2cm}
-\[\sum_j a_j - \sum_t b_t = 0\]
-
-Since commitments are additive and we don't know $\gamma$, we could easily prove our inputs equal outputs to observers by making the sum of commitments to input and output amounts equal zero:\footnote{Recall from Section \ref{elliptic_curves_section} we can subtract a point by inverting its coordinates. If $P = (x, y)$, $-P = (-x, y)$. Recall also that negations of field elements are calculated$\pmod q$, so $(–y \pmod q)$.}
-\[\sum_{j}{C_{j, in}}     - \sum_{t}{C_{t, out}} = 0\]
-
-To avoid sender identifiability, Shen Noether proposed \cite{MRL-0005} verifying that commitments sum to a certain non-zero value:\vspace{.2cm}
+The solution adopted is a Diffie-Hellman shared secret $r K_B^v$ using the `transaction public key' (recall Section \ref{sec:multi_out_transactions}). For any given transaction in the blockchain, each of its outputs $t \in \{0, ..., p-1\}$ has a mask $y_t$ that senders and receivers can privately compute, and an {\em amount} stored in the transaction's data. While $y_t$ is an elliptic curve scalar and occupies 32 bytes, $b$ will be restricted to 8 bytes by the range proof so only an 8 byte value needs to be stored.\footnote{As\marginnote{src/crypto- note\_core/ cryptonote\_ tx\_utils.cpp {\tt construct\_ tx\_with\_ tx\_key()} calls {\tt generate\_ output\_ ephemeral\_ keys()}} with the one-time address $K^o$ from Section \ref{sec:one-time-addresses}, the output index $t$ is appended to the shared secret before hashing. This ensures outputs directed to the same address do not have similar masks and {\em amounts}, except with negligible probability. Also like before, the term $r K^v_B$ is multiplied by 8, so it's really $8rK^v_B.$}\footnote{This solution (implemented in v10 of the protocol) replaced a previous method that used more data, thereby causing the transaction type to change from v3 ({\tt RCTTypeBulletproof}) to v4 ({\tt RCTTypeBulletproof2}). The first edition of this report discussed the previous method \cite{ztm-1}.}\marginnote{src/ringct/ rctOps.cpp {\tt ecdh- Encode()}}[.725cm]\vspace{.175cm}%Under construct_tx_with_tx_key, key_amounts is created with the shared secret r K_B^v concatenated with the index by calling generate_output_ephemeral_keys() which then uses derivation_to_scalar(), then ecdhEncode builds the mask and amount when key_amounts is passed to it with the unmasked mask & amount. After update, ecdhHash and xor8 also play a role.
 \begin{align*}
-\sum_{j}{C_{j, in}}     - \sum_{t}{C_{t, out}} &= z G \\
-\sum_{j}{(x_j G + a_j H)}  - \sum_{t}{(y_t G + b_t H)} &= z G \\
-\sum_{j} x_j - \sum_{t} y_t &= z
+  y_t &= \mathcal{H}_n(``commitment\_mask",\mathcal{H}_n(r K_B^v, t)) \\
+  \mathit{amount}_t &= b_t \oplus_8 \mathcal{H}_n(``amount”, \mathcal{H}_n(r K_B^v, t))
 \end{align*}
 
-The reasons why this is useful will become clear in Chapter \ref{chapter:transactions} when we discuss the structure of transactions.
+Here, $\oplus_8$ means to perform an XOR operation (Section \ref{sec:XOR_section}) between the first 8 bytes of each operand ($b_t$ which is already 8 bytes, and $\mathcal{H}_n(...)$ which is 32 bytes). Recipients can perform the same XOR operation on $\mathit{amount}_t$ to reveal $b_t$.
 
-Note that $C = z G$ is called a {\em commitment to zero} because we can make a signature with $z$, which proves that there is no $H$ component to $C$ (assuming $\gamma$ is unknown). In other words $C = z G + 0 H$.
+The receiver Bob will be able to calculate the blinding factor $y_t$ and the amount $b_t$ using the transaction public key $r G$ and his view key $k_B^v$. He can also check that the commitment $C(y_t, b_t)$ provided in the transaction data, henceforth denoted $C_t^b$, corresponds to the amount at hand.\\
+
+More generally, any third party with access to Bob’s view key could decrypt his output amounts, and also make sure they agree with their associated commitments.
+
+
+
+\section{RingCT introduction}
+\label{sec:ringct-introduction}
+
+A transaction will contain references to other transactions' outputs (telling observers which old outputs are to be spent), and its own outputs. The content of an output includes a one-time address (assigning ownership of the output) and an output commitment hiding the amount (also the encoded output amount from Section \ref{sec:pedersen_monero}).
+
+While a transaction's verifiers don’t know how much money is contained in each input and output, they still need to be sure the sum of input amounts equals the sum of output amounts. Monero uses a technique called RingCT \cite{MRL-0005-ringct}, first implemented in January 2017 (v4 of the protocol), to accomplish this.
+
+If we have a transaction with $m$ inputs containing amounts \(a_1, ..., a_m\), and $p$ outputs with amounts \(b_0, ..., b_{p-1}\), then an observer would justifiably expect that:\footnote{If the intended total output amount doesn't precisely equal any combination of owned outputs, then transaction authors can add a `change' output sending extra money back to themselves. By analogy to cash, with a 20\$ bill and 15\$ expense you will receive 5\$ back from the cashier.}\vspace{.175cm}
+\[\sum_j a_j - \sum_t b_t = 0\]
+
+Since commitments are additive and we don't know $\gamma$, we could easily prove our inputs equal outputs to observers by making the sum of commitments to input and output amounts equal zero (i.e. by setting the sum of output blinding factors equal to the sum of old input blinding factors):\footnote{Recall from Section \ref{elliptic_curves_section} we can subtract a point by inverting its coordinates then adding it. If $P = (x, y)$, $-P = (-x, y)$. Recall also that negations of field elements are calculated$\pmod q$, so $(–x \pmod q)$.}\vspace{.175cm}
+\[\sum_{j}{C_{j, in}} - \sum_{t}{C_{t, out}} = 0\]
+
+To avoid sender identifiability we use a slightly different approach. The amounts being spent correspond to the outputs of previous transactions, which had commitments\vspace{.175cm}
+\[C^a_{j} = x_j G + a_j H\]
+
+The sender can create new commitments to the same amounts but using different blinding factors; that is,
+\[C'^a_{j} = x'_j G + a_j H\]
+
+Clearly, she would know the private key of the difference between the two commitments: \vspace{.175cm}
+\[C^a_{j} - C'^a_{j} = (x_j - x'_j) G\]\\
+Hence, she would be able to use this value as a {\em commitment to zero}, since she can make a signature with the private key $(x_j - x'_j) = z_j$ and prove there is no $H$ component to the sum (assuming $\gamma$ is unknown). In other words prove that $C^a_{j} - C'^a_{j} = z_j G + 0H$, which we will actually do in Chapter \ref{chapter:transactions} when we discuss the structure of RingCT transactions.
+
+Let us call $C'^a_j$ a {\em pseudo output commitment}. Pseudo output commitments are included in transaction data, and there is one for each input.
+
+Before committing a transaction to the blockchain, the network will want to verify that its amounts balance. Blinding factors for pseudo and output commitments are selected such that\vspace{.175cm}
+\[\sum_j x'_j  - \sum_t y_t = 0\]
+
+This\marginnote{src/ringct/ rctSigs.cpp verRct- Semantics- Simple()} allows us to prove input amounts equal output amounts:\vspace{.175cm}
+\[(\sum_j C'^a_{j} - \sum_t C^b_{t}) = 0\]
+
+Fortunately, choosing such blinding factors is easy. In the current version of Monero, all blinding factors are random except for the $m$\nth pseudo out commitment, where $x'_m$ is simply\marginnote{genRct- Simple()}
+\[x'_m = \sum_t y_t - \sum_{j=1}^{m-1} x'_j\]
 
 
 
@@ -65,7 +103,7 @@ Note that $C = z G$ is called a {\em commitment to zero} because we can make a s
 
 One problem with additive commitments is that, if we have commitments $C(a_1)$, $C(a_2)$, $C(b_1)$, and $C(b_2)$ and we intend to use them to prove that $(a_1 + a_2) - (b_1 + b_2) = 0$, then those commitments would still apply if one value in the equation were `negative'.
 
-For instance, we could have $a_1 = 6$, $a_2 = 5$, $b_1 = 21$, and $b_2 = -10$.\vspace{.2cm}
+For instance, we could have $a_1 = 6$, $a_2 = 5$, $b_1 = 21$, and $b_2 = -10$.\vspace{.175cm}
 \begin{flalign*}
     && (6 + 5) - (&21 + -10) = 0&\\
      \intertext{\quad \quad \quad \quad \quad where} && 21G + -10G = 21G + (&l-10)G = (l + 11)G = 11G&
@@ -73,72 +111,9 @@ For instance, we could have $a_1 = 6$, $a_2 = 5$, $b_1 = 21$, and $b_2 = -10$.\v
 
 Since $-10 = l-10$, we have effectively created $l$ more Moneroj (over 7.2x10$^{74}$!) than we put in.
 
-The solution addressing this issue in Monero is to prove each output amount is in a certain range using the Borromean signature scheme described in Section \ref{sec:borromean}. This method treats each bit in the binary representation of the amount as a separate amount which we can commit to zero.
-\\
+%Bulletproofs start here
+The solution addressing this issue in Monero is to prove each output amount is in a certain range (from 0 to $2^{64}-1$) using the Bulletproofs proving scheme first described by Benedikt B\"{u}nz {\em et al.} in \cite{Bulletproofs_paper} (and also explained in \cite{adam-zero-to-bulletproofs,dalek-bulletproofs-notes}).\footnote{It's conceivable that with several outputs in a legitimate range, the sum of their amounts could roll over and cause a similar problem. However, when the maximum output is much smaller than $l$ it takes a huge number of outputs for that to happen. For example, if the range is 0-5, and l = 99, then to counterfeit money using an input of 2, we would need $5 + 5 + …. + 5 + 1 = 101 \equiv 2 \pmod{99}$, for 21 total outputs. In Monero $l$ is about 2\^{}189 times bigger than the available range, which means a ridiculous 2\^{}189 outputs to counterfeit money.} Given the involved and intricate nature of Bulletproofs, it is not elucidated in this document. Moreover we feel the cited materials adequately present its concepts.\footnote{Prior to protocol v8 range proofs were accomplished with Borromean ring signatures, which were explained in the first edition of Zero to Monero \cite{ztm-1}.}
 
-Given a commitment $C(b)$ with blinding factor $y_b$ for amount \(b\), use the binary representation \((b_0, b_1, ..., b_{k-1})\) such that 
-\[b = b_0 2^0 + b_1 2^1 + ... + b_{k-1} 2^{k-1}  \]
+The Bulletproof proving algorithm\marginnote{src/ringct/ rctSigs.cpp {\tt proveRange- Bullet- proof()}} takes as input output amounts $b_t$ and commitment masks $y_t$, and outputs all $C^b_t$ and an $n$-tuple aggregate proof $\Pi_{BP} = (A, S, T_1, T_2, \tau_x, \mu, \mathbb{L}, \mathbb{R}, a, b, t)$\footnote{Vectors $\mathbb{L}$ and $\mathbb{R}$ contain $\lceil \textrm{log}_2(64 \cdot p) \rceil$ elements each. $\lceil$ $\rceil$ means the log function is rounded up. Due to their construction, some Bulletproofs use `dummy outputs' as padding to ensure $p$ plus the number of dummy outputs is a power of 2. Those dummy outputs can be generated during verification, and are not stored with the proof data.}\footnote{The variables in a Bulletproof are unrelated to other variables in this document. Symbol overlap is merely coincidental. Note that group elements $A, S, T_1, T_2, \mathbb{L},$ and $\mathbb{R}$ are multiplied by 1/8 before being stored, then multiplied by 8 during verification. This ensures they are all members of the $l$ sub-group (recall Section \ref{elliptic_curves_section}).}. That single proof is used to prove all output amounts are in range at the same time, as aggregating them greatly reduces space requirements (although it does increase the time to verify).\footnote{It turns out multiple separate Bulletproofs can be `batched'\marginnote{rct/ringct/ bulletproofs.cc {\tt bulletproof\_ VERIFY()}} together, which means they are verified simultaneously. Doing so improves how long it takes to verify them, and currently in Monero Bulletproofs are batched on a per-block basis, although there is no theoretical limit to how many can be batched together. Each transaction is only allowed to have one Bulletproof.} The verification algorithm takes as input all $C^b_t$, and $\Pi_{BP}$, and outputs {\tt true} if all committed amounts are in the range 0 to $2^{64} - 1$.
 
-Generate random numbers \(y_0, ..., y_{k-1} \in_R \mathbb{Z}_l\) to be used as blinding factors.
-Define also Pedersen commitments for each \(b_i\), \(C_ i = y_i G + b_i 2^i H\),  and derive public keys \(\{C_i, C_i - 2^i H\}\). 
-
-
-Clearly one of those public keys will equal \(y_i G\):\vspace{.2cm}
-\begin{alignat*}{3}
-\textrm{if}\ b_i = 0 \ \textrm{then}\ \ \ &  \ C_i &&= y_i G + 0 H &&= y_i G \\
-\textrm{if}\ b_i = 1 \ \textrm{then}\ \ \ & \ C_i - 2^i H &&= y_i G + 2^i H  - 2^i H &&= y_i G 
-\end{alignat*}
-
-In other words, a blinding factor \(y_i\) will always be the private key corresponding to one of the points \(\{C_i, C_i - 2^i H\}\). The point that equals $y_i G$ is a {\em commitment to zero}, because either $b_i 2^i = 0$ or $b_i 2^i - 2^i = 0$. We can prove a transaction output's amount $b$ is in the range $[0, ..., 2^{k} -1]$ by signing it using the Borromean Ring Signature scheme of Section\marginnote{src/ringct/ rctSigs.cpp genBorromean()} \ref{sec:borromean} with the ring of public keys:\vspace{.2cm}
-\[\{ \{C_0, C_0 - 2^0 H\}, ..., \{C_{k-1}, C_{k-1} - 2^{k-1} H\}  \}\]\\[-.4cm]
-where we know the private keys $\{y_0, ..., y_{k-1}\}$ corresponding to each pair.\vspace{.2cm}
-\begin{center}
-    Resulting in a signature $\sigma = (c_1, r_{0,1}, r_{0,2}, r_{1,1}..., r_{k-1,2})$
-\end{center}
-
-
-\section{Range proofs in a blockchain}
-\label{range_proofs_blockchain_section}
-
-In the context of Monero we will use range proofs to prove there are valid amounts in the outputs of each transaction.
-
-Transaction verifiers will have to check that the sum of each output's range proof commitments $C_i$ equals its amount commitment $C_b$. For this to work we need to modify our definition of the blinding factor\marginnote{src/ringct/ rctSigs.cpp prove- Range()} $y_b$: set $y_0, ..., y_{k-1} \in_R \mathbb{Z}_l$ and define $y_{b} = \sum_{i=0}^{k-1} y_i$. The following equation now holds
-\[\sum^{k-1}_{i=0} C_i = C_b\]
-
-We will store only the range proof commitments/keys $C_i$, the output amount's commitment $C_b$, and the signature $\sigma$'s terms in the blockchain. The mining community can easily calculate $C_i - 2^i H$ and verify the Borromean ring signature for each output.
-
-It will not be necessary for the receiver nor any other party to know the blinding factors $y_i$, as their sole purpose is proving a new output's amount is in range. 
-\\
-
-Since the Borromean signature scheme requires knowledge of $y_i$ to produce a signature, any third party who verifies one can convince himself that each loop contains a commitment to zero, so total amounts must fall within range and money is not being artificially created.\\
-
-In this scheme we store (1+$2*k$) integers, use $k$ public keys (commitments), and verify with:
-
-\begin{itemize}
-    \setlength\itemsep{\listspace}
-    \item [\textbf{DVBA}] Double-variable-base addition for some integers $a, b$, and point $B$: $a G + b B$ \quad \([2*k]\)
-\end{itemize}
-
-Verifiers need to calculate $C_i - 2^i H$ and $\sum_i C_i$, so verification times include:
-
-\begin{itemize}
-    \setlength\itemsep{\listspace}
-    \item [\textbf{PA}] Point addition for some points $A, B$: $A + B$ \quad \([k-1]\)
-    \item [\textbf{PS}] Point subtraction for some points $A, B$ : $A - B$ \quad \([k]\)
-    \item [\textbf{KBSM}] Known-base scalar multiplications for some integer $a$: $a G$ \quad \([k]\)
-\end{itemize}
-
-Monero\marginnote{src/ringct/ rctSigs.cpp verRange()} uses a special function to compute $C_i - 2^i H$ and $\sum_i C_i = C$ that is supposed to be faster:
-
-\begin{itemize}
-    \setlength\itemsep{\listspace}
-    \item [\textbf{VRSF}] Verify range proof special function \quad \([k]\)
-\end{itemize}
-
-For\marginnote{src/ringct/ rctOps.cpp} a total verification requirement:
-
-\begin{itemize}
-    \setlength\itemsep{\listspace}
-    \item [\textbf{VRSF}] Verify range proof special function \quad \([k]\)
-    \item [\textbf{DVBA}] Double-variable-base addition for some integers $a, b$, and point $B$: $a G + b B$ \quad \([2*k]\)
-\end{itemize}
+The $n$-tuple $\Pi_{BP}$ occupies $(2 \cdot \lceil \textrm{log}_2(64 \cdot p) \rceil + 9) \cdot 32$ bytes of storage.

@@ -4,294 +4,199 @@
 	\textcolor{red}{\small
 		\arabic{FancyVerbLine}}}
 
+\chapter{{\tt RCTTypeBulletproof2} Transaction Structure}
+\label{appendix:RCTTypeBulletproof2}
 
-\chapter{{\tt RCTTypeFull} Transaction Structure}
-\label{appendix:RCTTypeFull}
-
-We present in this chapter a dump from a real Monero transaction of type {\tt RCTTypeFull}, 
+We present in this appendix a dump from a real Monero transaction of type {\tt RCTTypeBulletproof2}, 
 together with explanatory notes for relevant fields.
 
-The dump was obtained executing command {\tt print\_tx <TransactionID> +hex +json} in the {\tt monerod} daemon run in non-detached mode. {\tt <TransactionID>} is a hash of the transaction. The first line printed shows the actual command run.% see chapter 7 blockchain on TransactionID
+The dump was obtained from the block explorer \url{https://xmrchain.net}. It can also be acquired by executing command {\tt print\_tx <TransactionID> +hex +json} in the {\tt monerod} daemon run in non-detached mode. {\tt <TransactionID>} is a hash of the transaction (Section \ref{subsec:transaction-id}). The first line printed shows the actual command to run.% see chapter 7 blockchain on TransactionID
 
-To replicate our results, readers can do the following:\footnote{Blockchain data can also be found with a web block explorer, such as \url{https://moneroblocks.info/}.}
+To replicate our results, readers can do the following:%\footnote{Blockchain data can also be found with a web block explorer, such as \url{https://moneroblocks.info/} or \url{https://xmrchain.net}.}
 \begin{enumerate}
-    \item We need the Monero command line tool (CLI), which can be found at \url{getmonero.org/downloads} (among other places). Get the `Command Line Tools Only' for your operating system, move the file to a useful location, and unzip it.
-    \item Open the terminal/command line and navigate into the folder created by unziping.
-    \item Run {\tt monerod} with {\tt ./monerod}. Now the Monero blockchain will download. Unfortunately, there is currently no easy way to print transactions without downloading the blockchain.
+    \item We need the Monero command line tool (CLI), which can be found at \url{https://web.getmonero.org/downloads/} (among other places). Get the `Command Line Tools Only' for your operating system, move the file to a useful location, and unzip it.
+    \item Open the terminal/command line and navigate into the folder created by unzipping.
+    \item Run {\tt monerod} with {\tt ./monerod}. Now the Monero blockchain will download. Unfortunately, there is currently no easy way to print transactions on your own system (e.g. without using a block explorer) without downloading the blockchain.
     \item After the syncing process is done, commands like {\tt print\_tx} will work. Use {\tt help} to learn other commands.
 \end{enumerate}
 
-For editorial reasons we have shortened long hexadecimal chains, presenting only the beginning and end as in {\tt 0200010c7f[...]409}.
+%For editorial reasons we have shortened long hexadecimal chains, presenting only the beginning and end as in {\tt 0200010c7f[...]409}.
+
+Component {\tt rctsig\_prunable}, as indicated by its name, is {\sl prunable} from the blockchain. That is, once a block has been consensuated and the current chain length rules out all possibilities of double-spending attacks, this whole field can be pruned and replaced with its hash for the Merkle tree.
+
+Key images are stored separately, in the non-prunable area of transactions. These are essential for detecting double-spend attacks and can’t be pruned away.
 \\
 
-Component {\tt rctsig\_prunable}, as indicated by its name, is in theory {\sl prunable} from the blockchain. That is, once a block has been consensuated and the current chain length rules out all possibilities of double-spending attacks, this whole field could be pruned and replaced with its hash for the Merkle tree. This is something that has not yet been done in the Monero blockchain, but is nevertheless a possibility, and would yield considerable space savings. 
-
-Key images and ring keys are stored separately, in the non-prunable area of transactions. These components are essential for detecting double-spend attacks and can’t be pruned away.
-\\
-
-Our sample transaction has 1 input and 2 outputs, and was added to the blockchain at timestamp 2017-12-18 20:28:11 UTC (as reported by its block's miner).
-
+Our sample transaction has 2 inputs and 2 outputs, and was added to the blockchain at timestamp 2020-03-02 19:01:10 UTC (as reported by its block's miner).
 
 \begin{Verbatim}[commandchars=\\\{\}, numbers=left]
-print_tx  b43a7ac21e1b60ad748ec905d6e03cf3165e5d8c9e1c61c263d328118c42eaa6 +hex +json
-Found in blockchain at height 1467685
-0200010c7f[...]409
-\{
-   "version": 2,
-   "unlock_time": 0, 
-   "vin": [ \{
-      "key": \{
-         "amount": 0, 
-         "key_offsets": [ 799048, 782511, 1197717, 216704, 841722
-         ], 
-         "k_image": "595a612d0df27181c46a8af70a9bd682f2a000124b873ba5d2b9f4b4e4efd672"
-      \}
-   \}
-   ], 
-   "vout": [ \{
-      "amount": 0, 
-      "target": \{
-         "key": "aa9595f55f2cfaed3bd2a67453bb064dc7fd454a09c2418d7338782790185fe3"
-      \}
-   \}, \{
-      "amount": 0, 
-      "target": \{
-         "key": "0ccb48ed2ebbcaa8e8831111029f3300069cff0d1408acffbfc3810b362ea217"
-      \}
-   \}
-   ], 
-   "extra": [ 2, 33, 0, 129, 70, 77, 194, 248, 93, 24, 94, 15, 107, 233, 0, 229, 82, 
-   175, 243, 123, 58, 204, 135, 171, 100, 101, 192, 42, 187, 157, 168, 222, 98, 192, 
-   110, 1, 1, 185, 87, 22, 38, 116, 81, 124, 85, 68, 36, 44, 229, 235, 46, 159, 139, 
-   114, 234, 211, 50, 41, 28, 92, 26, 249, 184, 228, 197, 64, 139, 5
-   ], 
-   "rct_signatures": \{
-      "type": 1, 
-      "txnFee": 26000000000, 
-      "ecdhInfo": [ \{
-         "mask": "68f508c5515694ce5a33b316b990e8b67a944725c93d806767e61b2e0b13d300", 
-         "amount": "913372a2424b22bd9712183f5a7c8027c8d9af89b52d1e7d06fd1f87a1e5d20d"
-      \}, \{
-         "mask": "fbc3e5bdb36fc58e5800ffc549ab7bd533fadb7e6b64898c82ea620d749fc80e", 
-         "amount": "b9335c3dc0afb774f812f9f58a412c849f3c828d873f1c16ab102963799d9809"
-      \}], 
-      "outPk": [ "cf141f5dfe04df14afad6b451d600aa5826a9be44a76a1630850c1d5951d482e",
-                 "e10bb69b66af5dabec765c7f5f7528926088877fa36746833828a0575896ae57"]
-   \}, 
-   "rctsig_prunable": \{
-      "rangeSigs": [ \{
-         "asig": "b9b544a7[...]d4c5726e81c4c4b6205dacc05208", 
-         "Ci": "bc7ae457[...]fe490458"
-      \}, \{
-         "asig": "9c457b41[...]545b60c", 
-         "Ci": "ce9b4d8e[...]03a6752"
-      \}], 
-      "MGs": [ \{
-         "ss": [[ "a8120b96f5f2ac5bceab37f7d6bf8d86554d87c4af3441007cad92f54a24d908",
-          "2e6bc016297a5d398936c9f45e7a80215138f69e55179b337922e2d51c1a9f00"], 
-          ["1e1052a68c38bb88b6e8f257d999c13f1d5f4fa219cc23479ccbfa6b14b5960a",
-           "e914d35eed0d27344fbc3a89b91bd445d433b561efc844c9f466a61ebb5f6d09"], 
-          ["e04d011f515461fdbd8d13536c23143dc365d87dd323defb1af834e540a8fc0e",
-           "f9b41a117a1415fec54f1cc16aeef859b2cab1494b9e26a95fc9eaf4f571fa00"], 
-          ["de7a7b30795cab310b632f708c6c2546847a5cbcc27ff48e75c1556c3f6f180c",
-           "6218695558359d115e308b008d9aa368c38672732d2fc21c6317ad7d15918c05"], 
-          ["0ca70bbdea0e391b1e24e2540f33b48dd9dc554c61ebf23bb3691aab5094e40f",
-           "dafecd436b2448504c0a3a1997b356c141f1d4b5977cc66e5f55592f13731501"]],        
-         "cc": "5059757cf06216215955aaa108e8dd40be157856749a9d883bcac611e395a409"
-      \}]
-   \}
-\}
-
-\end{Verbatim}
-
-
-\section*{Transaction components}
-	
-\begin{itemize}
-    \item (line 2) - {\tt print\_tx} reports where it found the transaction.
-    \item (line 3) - Raw transaction data with no readability formatting.
-	\item {\tt version} (line 5) - Transaction format/era version; `2' corresponds to RingCT.
-	\item {\tt unlock\_time} (line 6) - Prevents a transaction's outputs from being spent until the time has past. It is either a block height, or a UNIX timestamp if the number is larger than the beginning of UNIX time.	
-	\item {\tt vin} (line 7-14) - List of inputs (there’s only one here)
-	\item {\tt amount} (line 9) - Deprecated (legacy) amount field for type 1 transactions
-	\item {\tt key\_offset} (line 10) - This allows verifiers to find ring member keys and commitments in the blockchain, and makes it obvious those members are legitimate. The first offset is absolute within the blockchain history, and each subsequent offset is relative to the previous. For example, with real offsets \{7,11,15,20\}, the blockchain records \{7,4,4,5\}. Verifiers compute the last offset like (7+4+4+5 = 20) (Section \ref{subsec:space-and-ver-rcttypefull}).
-	\item {\tt k\_image} (line 12) - Key image \(\tilde{K_j}\) from Section \ref{sec:MLSAG}, where $m = j = 1$ for the 1 input here.
-	\item {\tt vout} (lines 16-27) - List of outputs (there are two here)
-	\item {\tt amount} (line 17) - Deprecated amount field for type 1 transactions
-	\item {\tt key} (line 19) - One-time destination key for output $t$ as described in Section \ref{sec:one-time-addresses}
-	\item {\tt extra} (lines 28-32) - Miscellaneous\marginnote{src/crypto- note\_basic/ tx\_extra.h} data, including the {\em transaction public key}, i.e. the share secret $r G$ of Section  \ref{sec:one-time-addresses}, and payment ID or encoded payment ID from Section \ref{sec:integrated-addresses}. It works like this: each number is one byte (it can be 0-255), and each kind of thing that can be in the field has a `tag' and `size'. Tag indicates which information comes next, and size indicates how many bytes that info occupies. The first number is always a tag. Here, `2' indicates an `extra nonce' which is useful for mining pools, and then `33' means the nonce has 33 bytes. 33 numbers go by, then we find a new tag, `1', which means `transaction public key'. Tx public keys are always 32 bytes, so we don't need to include the size. 32 numbers later is the end of this extra field. (note: in original specification the first byte indicated the size of the field. Monero doesn't use that.) \cite{tx-extra-field}
-	\item {\tt rct\_signatures} (lines 33-45) - First part of signature data
-	\item {\tt type} (line 34) - Signature type; {\tt RCTTypeFull} is type 1. {\tt RCTTypeSimple} = 2, {\tt RCTTypeNull} (miner tx) = 0.
-	\item {\tt txnFee} (line 35) - Transaction fee in clear, in this case 0.026 XMR
-	\item {\tt ecdhInfo} (lines 36-42) - ‘elliptic curve diffie-hellman info’: Obscured mask and amount for each of the outputs $t \in \{1, ..., p\}$; here $p = 2$
-	\item {\tt mask} (line 37) - Field {\sl mask} at $t = 1$ as described in Section \ref{amount-commitments}
-    \item {\tt amount} (line 38) - Field {\sl amount} at $t = 1$ as described in Section \ref{amount-commitments}
-    \item {\tt outPk} (lines 43-44) - Commitments for each output, Section \ref{sec:commitments-to-zero}
-    
-    \item {\tt rctsig\_prunable} (lines 46-67) - Second part of signature data
-    \item {\tt rangeSigs} (lines 47-53) - Range proofs for output $t \in {1, ..., p}$ commitments 
-    \item {\tt asig} (line 48) - List of Borromean signature terms (shortened for brevity) for the range proof of output $t = 1$ (includes all $c$ and $r$), see Section \ref{subsec:space-and-ver-rcttypefull} 
-    \item {\tt Ci} (line 49) -  List of commitments (shortened for brevity) for the range proof on output $t = 1$, as described in Section \ref{full-signature}. As explained in Section \ref{subsec:space-and-ver-rcttypefull} only the commitments $C_i$ need to be stored, as the values $C_i -2^i H$ can be easily derived by verifiers. 
-    \item {\tt MGs} (lines 54-66) - Remaining elements of the MLSAG signature
-    \item {\tt ss} (lines 55-64) - Components \(r_{i,j}\) from the MLSAG signature
-      \[\sigma(\mathfrak{m}) = (c_1, r_{1, 1}, ..., r_{1, m+1}, ..., r_{v+1, 1}, ..., r_{v+1, m+1}) \]
-    \item {\tt cc} (line 65) - Component \(c_1\) from aforementioned MLSAG signature
-	
-\end{itemize}
-
-
-
-
-
-\chapter{{\tt RCTTypeSimple} Transaction Structure}
-\label{appendix:RCTTypeSimple}
-
-
-In this section we show the structure of a sample transaction of type {\tt RCTTypeSimple}. The transaction has 4 inputs and 2 outputs, and was added to the blockchain at timestamp \( \textrm{2017-12-21 11:36:20 UTC} \) (as reported by its block's miner).
-
-
-\begin{Verbatim}[commandchars=\\\{\}, numbers=left]
-print_tx 3ebf45fc5f8fd683037807384122817d5debfa762c7a7845cb7ccfe9ee20940b 
-Found in blockchain at height 1469563
-020004[...]923b3d70d
+print_tx 84799c2fc4c18188102041a74cef79486181df96478b717e8703512c7f7f3349
+Found in blockchain at height 2045821
 \{
   "version": 2, 
   "unlock_time": 0, 
   "vin": [ \{
       "key": \{
         "amount": 0, 
-        "key_offsets": [ 1567249, 1991110, 349235, 15551, 3620
+        "key_offsets": [ 14401866, 142824, 615514, 18703, 5949, 22840, 5572, 16439,
+        983, 4050, 320
         ], 
-        "k_image": "9661119b4b54529e1be14ef97fbdc0504d17a6c8dfedd55d2455b93a6336bb41"
+        "k_image": "c439b9f0da76ca0bb17920ca1f1f3f1d216090751752b091bef9006918cb3db4"
       \}
     \}, \{
       "key": \{
         "amount": 0, 
-        "key_offsets": [ 2502375, 650851, 337433, 396459, 39529
+        "key_offsets": [ 14515357, 640505, 8794, 1246, 20300, 18577, 17108, 9824, 581,
+        637, 1023
         ], 
-        "k_image": "2102414d8edfa229f9ebf32ab90acd9cf23963a8c3b6ba0e181fc1d5782c046c"
-      \}
-    \}, \{
-      "key": \{
-        "amount": 0, 
-        "key_offsets": [ 1907097, 696508, 806254, 510195, 6709
-        ], 
-        "k_image": "de14ec8958b311bd38a05aa3fb08fdd360001f1b9c060264eecdd8c08c9e83c4"
-      \}
-    \}, \{
-      "key": \{
-        "amount": 0, 
-        "key_offsets": [ 1150236, 1943388, 788506, 37175, 7462
-        ], 
-        "k_image": "e470f77dd5a4149210cb61ee107e73caea1ef9f61d05384e3bd4372fdc85bf17"
+        "k_image": "03750c4b23e5be486e62608443151fa63992236910c41fa0c4a0a938bc6f5a37"
       \}
     \}
   ], 
   "vout": [ \{
       "amount": 0, 
       "target": \{
-        "key": "787cad1ebb181e1fc04b24d4d06c3d2882c38b262a7635de8ad487c536e40a12"
+        "key": "d890ba9ebfa1b44d0bd945126ad29a29d8975e7247189e5076c19fa7e3a8cb00"
       \}
     \}, \{
       "amount": 0, 
       "target": \{
-        "key": "faf4137928392b39ccf0a830c0261573009959787697f9d4fb769c25781fb911"
+        "key": "dbec330f8a67124860a9bfb86b66db18854986bd540e710365ad6079c8a1c7b0"
       \}
     \}
   ], 
-  "extra": [ 1, 20, 56, 120, 111, 89, 89, 64, 10, 98, 96, 255, 202, 235, 203, 
-             255, 2, 197, 176, 147, 61, 60, 41, 145, 207, 178, 212, 71, 37, 69, 19, 
-             147, 205], 
+  "extra": [ 1, 3, 39, 58, 185, 169, 82, 229, 226, 22, 101, 230, 254, 20, 143,
+  37, 139, 28, 114, 77, 160, 229, 250, 107, 73, 105, 64, 208, 154, 182, 158, 200,
+  73, 2, 9, 1, 12, 76, 161, 40, 250, 50, 135, 231
+  ], 
   "rct_signatures": \{
-    "type": 2, 
-    "txnFee": 558805800000, 
-    "pseudoOuts": [ "64dea29ac5560f93773240d58ca5768b879fd3c95e0b3b50a80ec36a6ff3a6da",
-                    "a60e7a00e65ff2a6299b92b166a629e9b0d62f6df50e40535140716757efe4c0", 
-                    "4c67403adbc9dc0ca5a1a6abc846ab6d232dc3fa295099b3c7a9d005bac60eba", 
-                    "635b26d78117d77899859ecb61e10125c3956a5c113b932f33c92c561acddaa3"], 
+    "type": 4, 
+    "txnFee": 32460000, 
     "ecdhInfo": [ \{
-        "mask": "ccffac42a86bec7b36ce9957cbdfe481d419bc5353335d0c236c347aea758d0c", 
-        "amount": "c0d6cf3e1db55dd459b73faf34d7339c3fa1b3d3356cfb2adc3faf798264b00e"
+        "amount": "171f967524e29632"
       \}, \{
-        "mask": "62cc846003d9c5425c6cf33b30754a4c044f5d9d02621460e45664b886673109", 
-        "amount": "726dbacad62022bf0f5af05c72482b3f040d631d3f576b5e2615ea72f84c5f06"
+        "amount": "5c2a1a9f54ccf40b"
       \}], 
-    "outPk": [ "cb3b729b4fca6e66736666201633e3f905c367a2f3d18e31fe3d3c18d2be93fd", 
-               "1e8c86b7f211a99e1762bf62254efe65ea5c5328b62b0ea8d679b2e52800f633"]
+    "outPk": [ "fed8aded6914f789b63c37f9d2eb5ee77149e1aa4700a482aea53f82177b3b41",
+    "670e086e40511a279e0e4be89c9417b4767251c5a68b4fc3deb80fdae7269c17"]
   \}, 
   "rctsig_prunable": \{
-    "rangeSigs": [ \{
-        "asig": "9bb7cce09[...]61de7ce0a", 
-        "Ci": "50dfd2e8[...]b3a7c8fca1b1"
-      \}, \{
-        "asig": "e3905fa5c[...]b5213444908", 
-        "Ci": "595c2cec5f2[...]72a628ab5c"
-      \}], 
+    "nbp": 1, 
+    "bp": [ \{
+        "A": "98e5f23484e97bb5b2d453505db79caadf20dc2b69dd3f2b3dbf2a53ca280216", 
+        "S": "b791d4bc6a4d71de5a79673ed4a5487a184122321ede0b7341bc3fdc0915a796", 
+        "T1": "5d58cfa9b69ecdb2375647729e34e24ce5eb996b5275aa93f9871259f3a1aecd", 
+        "T2": "1101994fea209b71a2aa25586e429c4c0f440067e2b197469aa1a9a1512f84b7", 
+        "taux": "b0ad39da006404ccacee7f6d4658cf17e0f42419c284bdca03c0250303706c03", 
+        "mu": "cacd7ca5404afa28e7c39918d9f80b7fe5e572a92a10696186d029b4923fa200", 
+        "L": [ "d06404fc35a60c6c47a04e2e43435cb030267134847f7a49831a61f82307fc32",
+        "c9a5932468839ee0cda1aa2815f156746d4dce79dab3013f4c9946fce6b69eff",
+        "efdae043dcedb79512581480d80871c51e063fe9b7a5451829f7a7824bcc5a0b",
+        "56fd2e74ac6e1766cfd56c8303a90c68165a6b0855fae1d5b51a2e035f333a1d",
+        "81736ed768f57e7f8d440b4b18228d348dce1eca68f969e75fab458f44174c99",
+        "695711950e076f54cf24ad4408d309c1873d0f4bf40c449ef28d577ba74dd86d",
+        "4dc3147619a6c9401fec004652df290800069b776fe31b3c5cf98f64eb13ef2c"
+        ], 
+        "R": [ "7650b8da45c705496c26136b4c1104a8da601ea761df8bba07f1249495d8f1ce",
+        "e87789fbe99a44554871fcf811723ee350cba40276ad5f1696a62d91a4363fa6",
+        "ebf663fe9bb580f0154d52ce2a6dae544e7f6fb2d3808531b0b0749f5152ddbf",
+        "5a4152682a1e812b196a265a6ba02e3647a6bd456b7987adff288c5b0b556ec6",
+        "dc0dcb2e696e11e4b62c20b6bfcb6182290748c5de254d64bf7f9e3c38fb46c9",
+        "101e2271ced03b229b88228d74b36088b40c88f26db8b1f9935b85fb3ab96043",
+        "b14aae1d35c9b176ac526c23f31b044559da75cf95bc640d1005bfcc6367040b"
+        ], 
+        "a": "4809857de0bd6becdb64b85e9dfbf6085743a8496006b72ceb81e01080965003", 
+        "b": "791d8dc3a4ddde5ba2416546127eb194918839ced3dea7399f9c36a17f36150e", 
+        "t": "aace86a7a1cbdec3691859fa07fdc83eed9ca84b8a064ca3f0149e7d6b721c03"
+      \}
+    ], 
     "MGs": [ \{
-        "ss": [ [ "3b2d26ea7628015fd8317e4e298ceda6b534ac894b83f7b6190a353cee6ec702", 
-                  "2d772ad7b7ff2ba8a1a66c8d69c0a0d49d72808eaf803c59f13c3d78b653440c"], 
-                [ "c188891fb37d76305f0209222f52d22ede43018facfe91f949ecb8dcf709b30a", 
-                  "303896ca67ea7969544641d5bb94a436558bcf6522bb9bc77bd1abb5f2146c08"], 
-                [ "e01c88b7308403a9dd023d9eacf1ade17ab0fa54250148431b5a33c98e636100", 
-                  "ba36e34e5245e89c7c21af845b949cf3e82188df639390f094e31c9ba773060c"], 
-                [ "37175d72d2bef3f8bd9e65fb2861f7bce91e3b1e30278b2dcf26112831ac9405", 
-                  "8e77a5dd641a89e86dbe0708e8f59d0e2dc9fe4ddfd9b367c3a93522198a4706"], 
-                [ "fbb4f94f9ce0f081421e63677a63d5914f0536a481d57b6e5fc5379c84dfcb05", 
-                  "1ec40aa3c8a94c6b1915b7796423b0d7d6011aa2d6af636aff309b832f193408"]], 
-        "cc": "a03119e4257cca37f89ac3e97f0598b712c79162c73932d58ab4ce08c4ad6709"
+        "ss": [[ "d7a9b87cfa74ad5322eedd1bff4c4dca08bcff6f8578a29a8bc4ad6789dee106",
+        "f08e5dfade29d2e60e981cb561d749ea96ddc7e6855f76f9b807842d1a17fe00"],
+        ["de0a86d12be2426f605a5183446e3323275fe744f52fb439041ad2d59136ea0b",
+        "0028f97976630406e12c54094cbbe23a23fe5098f43bcae37339bfc0c4c74c07"],
+        ["f6eef1f99e605372cb1ec2b3dd4c6e56a550fec071c8b1d830b9fda34de5cc05",
+        "cd98fc987374a0ac993edf4c9af0a6f2d5b054f2af601b612ea118f405303306"],
+        ["5a8437575dae7e2183a1c620efbce655f3d6dc31e64c96276f04976243461e08",
+        "5090103f7f73a33024fbda999cd841b99b87c45fa32c4097cdc222fa3d7e9502"],
+        ["88d34246afbccbd24d2af2ba29d835813634e619912ea4ca194a32281ac14e0e",
+        "eacdf59478f132dd8dbb9580546f96de194092558ffceeff410ee9eb30ce570e"],
+        ["571dab8557921bbae30bda9b7e613c8a0cff378d1ec6413f59e4972f30f2470d",
+        "5ca78da9a129619299304d9b03186233370023debfdaddcd49c1a338c1f0c50d"],
+        ["ac8dbe6bb28839cf98f02908bd1451742a10c713fdd51319f2d42a58bf1d7507",
+        "7347bf16cba5ee6a6f2d4f6a59d1ed0c1a43060c3a235531e7f1a75cd8c8530d"],
+        ["b8876bd3a5766150f0fbc675ba9c774c2851c04afc4de0b17d3ac4b6de617402",
+        "e39f1d2452d76521cbf02b85a6b626eeb5994f6f28ce5cf81adc0ff2b8adb907"],
+        ["1309f8ead30b7be8d0c5932743b343ef6c0001cef3a4101eae98ffde53f46300",
+        "370693fa86838984e9a7232bca42fd3d6c0c2119d44471d61eee5233ba53c20f"],
+        ["80bc2da5fc5951f2c7406fce37a7aa72ffef9cfa21595b1b68dfab4b7b9f9f0c",
+        "c37137898234f00bce00746b131790f3223f97960eefe67231eb001092f5510c"],
+        ["01c89e07571fd365cac6744b34f1b44e06c1c31cbf3ee4156d08309345fdb20e",
+        "a35c8786695a86c0a4e677b102197a11dadc7171dd8c2e1de90d828f050ec00f"]], 
+        "cc": "0d8b70c600c67714f3e9a0480f1ffc7477023c793752c1152d5df0813f75ff0f"
       \}, \{
-        "ss": [ [ "f7aedeec462d7588330c71589fde5f0f234a627a6e5ed72cff34825a04d41707", 
-                  "31d7a5ba4e782db5c0704ab751a2ef8c4732f3cf699bc8f9994e79a97cd3190e"], 
-                [ "00e1d1ecdf31fdf7d57661f2234bfc859cfdc4dbfdfd0f5eec0576ef22592203", 
-                  "fdf08b803fa6de18bf0e0dc6855e877877bda0101eceb81e2223fe0175606300"], 
-                [ "3397ba3f9e8db066e3c4911b896debefbc73efbac4988e6aff5731ff8db15405", 
-                  "43d2b03d5263de99f56c256e646be503edd63dd03d377a469379fbf487e8600e"], 
-                [ "31afd1d5c3b07170ac127605fc35cbcc19cf963a35b2ff8f804e17e3b804000d", 
-                  "3a3bc124a10b0cf416656f8f682a427445140895440cca644c6aa38966399f0c"], 
-                [ "f499f0e4922d5cba35e3cc033489b60ec7ea26ff19cc9dd29357670f4bf8790b", 
-                  "1a4732b31f0f1a7d3322be5c4baca098f0a032c192bf9f8a6b5fd83cbdd9d401"]], 
-        "cc": "095fcab7ebf64c2ffecdacf11b70f97f0e709de0a84b3a13abca627f9df2c901"
-      \}, \{
-        "ss": [ [ "1808924b4154118c48f0b305562b6ffba86f38c64d4d8a087823f3383cddd006", 
-                  "4b18544be50aee8c4594b568d6be741c155a132cb83392d9b1a4cf35c3d5760c"], 
-                [ "9a95eeeecf3c3a48c43873a372c263357ff5f258a7bf8ed29a767237b0b0f202", 
-                  "4f1ea4d9d4b56db780dd078a3e8219d0f54eaccc197901671002a206f063cb0e"], 
-                [ "2c800017cab2b8388f58fed0d61a46570f64cacd8fabc4e84ddee735b3135f0a", 
-                  "458016f6fdf58b329fae0f929226ee2b8e410a14db8c6ede9b74fb718de71507"], 
-                [ "ea0fcaf793602dce25c8b2c4d17163f4298933b3fb09874307d8cde9a63c2c0c", 
-                  "df76fbcd336c07f37e90e1a0d0db1ba49519ba4325062228bc9242af2c525703"], 
-                [ "e3a7a0477eeb602a9a8203a6a496cca90c4769d57410246c4c8d665df34df900", 
-                  "44d206154f0ca85e12a92eefdbc3784e17e701a32ff93b550467679f67500c0d"]], 
-        "cc": "6f80de1c1d566776d2831f15c9a85fb1d8e8cecfd0d2753b318f0e84d89d3b08"
-      \}, \{
-        "ss": [ [ "5b82b4644b57e3d623de7c72c6ebd52959815c12c80b479e4cbe5437cf67640c", 
-                  "b70e0b69c75faba6a1630429f9f497db351347c210467f69e1b1c5f1a72afe02"], 
-                [ "f25a93a98f980cf489eb8f69369f4ec63eaea91fd677decab9b6ca0fe2feb606", 
-                  "124536c374cb6023a6aa6f22ae6e115a1ba12cb36c48f5f5ad43ce90f471da02"], 
-                [ "151ddc82322456d7f31b8b4b2290098c3bf2428370c7ef325660b5463ff26404", 
-                  "2fb9d2979e16c2b1131686bb85068ec559f9c6c64581e609b451bb2cd9d5740d"], 
-                [ "c03bed01d6ad60b3da5d2c88cf2e5023b51133c37e4917511715a11f09d8740d", 
-                  "432e01c2075ab6361af8636cc1c9254e12db98f5c323088792dfb42a1c894401"], 
-                [ "52206d801214e70d20ee7ca53823c143aa06c3d1b22b118cc8a15c9f861f0102", 
-                  "563c134f56f7a290e0980877e93bc4b08651e53dade079b1e6c066b70fb81406"]], 
-        "cc": "4102cd245db3e0d7c0e2280cfdba38b9b7a7ad8715b8fe68c1170cf923b3d70d"
-      \}]
+        "ss": [[ "4536e585af58688b69d932ef3436947a13d2908755d1c644ca9d6a978f0f0206",
+        "9aab6509f4650482529219a805ee09cd96bb439ee1766ced5d3877bf1518370b"],
+        ["5849d6bf0f850fcee7acbef74bd7f02f77ecfaaa16a872f52479ebd27339760f",
+        "96a9ec61486b04201313ac8687eaf281af59af9fd10cf450cb26e9dc8f1ce804"],
+        ["7fe5dcc4d3eff02fca4fb4fa0a7299d212cd8cd43ec922d536f21f92c8f93f00",
+        "d306a62831b49700ae9daad44fcd00c541b959da32c4049d5bdd49be28d96701"],
+        ["2edb125a5670d30f6820c01b04b93dd8ff11f4d82d78e2379fe29d7a68d9c103",
+        "753ac25628c0dada7779c6f3f13980dfc5b7518fb5855fd0e7274e3075a3410c"],
+        ["264de632d9cb867e052f95007dfdf5a199975136c907f1d6ad73061938f49c01",
+        "dd7eb6028d0695411f647058f75c42c67660f10e265c83d024c4199bed073d01"],
+        ["b2ac07539336954f2e9b9cba298d4e1faa98e13e7039f7ae4234ac801641340f",
+        "69e130422516b82b456927b64fe02732a3f12b5ee00c7786fe2a381325bf3004"],
+        ["49ea699ca8cf2656d69020492cdfa69815fb69145e8f922bb32e358c23cebb0f",
+        "c5706f903c04c7bed9c74844f8e24521b01bc07b8dbf597621cceeeb3afc1d0c"],
+        ["a1faf85aa942ba30b9f0511141fcab3218c00953d046680d36e09c35c04be905",
+        "7b6b1b6fb23e0ee5ea43c2498ea60f4fcf62f70c7e0e905eb4d9afa1d0a18800"],
+        ["785d0993a70f1c2f0ac33c1f7632d64e34dd730d1d8a2fb0606f5770ed633506",
+        "e12777c49ffc3f6c35d27a9ccb3d9b8fed7f0864a880f7bae7399e334207280e"],
+        ["ab31972bf1d2f904d6b0bf18f4664fa2b16a1fb2644cd4e6278b63ade87b6d09",
+        "1efb04fe9a75c01a0fe291d0ae00c716e18c64199c1716a086dd6e32f63e0a07"],
+        ["a6f4e21a27bf8d28fc81c873f63f8d78e017666adbf038da0b83c2ad04ef6805",
+        "c02103455f93c2d7ec4b7152db7de00d1c9e806b1945426b6773026b4a85dd03"]], 
+        "cc": "d5ac037bb78db41cf924af713b7379c39a4e13901d3eac017238550a1a3b910a"
+      \}],
+    "pseudoOuts": [ "b313c1ae9ca06213684fbdefa9412f4966ad192bc0b2f74ed1731381adb7ab58",
+    "7148e7ef5cfd156c62a6e285e5712f8ef123575499ff9a11f838289870522423"]
   \}
 \}
-
-
-
 \end{Verbatim}
 
 
+
 \section*{Transaction components}
-
-What follows is a short explanation of the most important elements in this type of transaction. We only mention components that are specific to, or differ from, the previous {\tt RCTTypeFull} transaction type.
-
-
+	
 \begin{itemize}
-	\item {\tt type} (line 53) - Signature type, in this case the value 2, corresponding to {\tt RCTTypeSimple} transactions
-    \item {\tt pseudoOuts} (lines 55-58) - Pseudo-output commitments $C'^a_j$, as described in Section  \ref{RCTTypeSimple-commitments}. Please recall that the sum of these commitments will equal the sum of the 2 output commitments of this transaction (plus the transaction fee commitment $f H$).
+    \item (line 2) - The command {\tt print\_tx} would report the block where it found the transaction, which we replicate here for demonstration purposes.
+	\item {\tt version} (line 4) - Transaction format/era version; `2' corresponds to RingCT.
+	\item {\tt unlock\_time} (line 5) - Prevents a transaction's outputs from being spent until the time has past. It is either a block height, or a UNIX timestamp if the number is larger than the beginning of UNIX time. It defaults to zero when no limit is specified.	
+	\item {\tt vin} (line 6-23) - List of inputs (there are two here)
+	\item {\tt amount} (line 8) - Deprecated (legacy) amount field for type 1 transactions
+	\item {\tt key\_offset} (line 9) - This allows verifiers to find ring member keys and commitments in the blockchain, and makes it obvious those members are legitimate. The first offset is absolute within the blockchain history, and each subsequent offset is relative to the previous. For example, with real offsets \{7,11,15,20\}, the blockchain records \{7,4,4,5\}. Verifiers compute the last offset like (7+4+4+5 = 20) (Section \ref{subsec:space-and-ver-rcttypefull}).
+	\item {\tt k\_image} (line 12) - Key image \(\tilde{K_j}\) from Section \ref{sec:MLSAG}, where $j = 1$ since this is the first input.
+	\item {\tt vout} (lines 24-35) - List of outputs (there are two here)
+	\item {\tt amount} (line 25) - Deprecated amount field for type 1 transactions
+	\item {\tt key} (line 27) - One-time destination key for output $t = 0$ as described in Section \ref{sec:one-time-addresses}
+	\item {\tt extra} (lines 36-39) - Miscellaneous\marginnote{src/crypto- note\_basic/ tx\_extra.h} data, including the {\em transaction public key}, i.e. the share secret $r G$ of Section  \ref{sec:one-time-addresses}, and encrypted payment ID from Section \ref{sec:integrated-addresses}. It typically works like this: each number is one byte (it can be 0-255), and each kind of thing that can be in the field has a `tag' and `length'. The tag indicates which information comes next, and length indicates how many bytes that info occupies. The first number is always a tag. Here, `1' indicates a `transaction public key'. Tx public keys are always 32 bytes, so we don't need to include the length. Thirty-two numbers later we find a new tag `2' which means `extra nonce', its length is `9', and the next byte is `1' which means an 8-byte encrypted payment ID (the extra nonce can have fields inside it, for some reason). Eight bytes go by, and that's the end of this extra field. See \cite{extra-field-stackexchange} for more details. (note: in the original Cryptonote specification the first byte indicated the size of the field. Monero doesn't use that.) \cite{tx-extra-field}
+	\item {\tt rct\_signatures} (lines 40-50) - First part of signature data
+	\item {\tt type} (line 41) - Signature type; {\tt RCTTypeBulletproof2} is type 4. Deprecated RingCT types {\tt RCTTypeFull} and {\tt RCTTypeSimple} were 1 and 2 respectively. Miner transactions use {\tt RCTTypeNull}, type 0.
+	\item {\tt txnFee} (line 42) - Transaction fee in clear text, in this case 0.00003246 XMR
+	\item {\tt ecdhInfo} (lines 43-47) - ‘elliptic curve diffie-hellman info’: Obscured amount for each of the outputs $t \in \{0, ..., p-1\}$; here $p = 2$
+    \item {\tt amount} (line 44) - Field {\sl amount} at $t = 0$ as described in Section \ref{sec:pedersen_monero}
+    \item {\tt outPk} (lines 48-49) - Commitments for each output, Section \ref{sec:ringct-introduction}
+
+    \item {\tt rctsig\_prunable} (lines 51-132) - Second part of signature data
+    \item {\tt nbp} (line 52) - Number of Bulletproof range proofs in this transaction
+    \item {\tt bp} (lines 53-80) - Bulletproof proof elements (Bulletproofs were not explored in this document, so we will not itemize further)\vspace{.175cm}
+    \[\Pi_{BP} = (A, S, T_1, T_2, \tau_x, \mu, \mathbb{L}, \mathbb{R}, a, b, t)\]
+    \item {\tt MGs} (lines 81-129) - MLSAG signatures
+    \item {\tt ss} (lines 82-103) - Components \(r_{i,1}\) and \(r_{i,2}\) from the first input's MLSAG signature\vspace{.175cm}
+    \[\sigma_j(\mathfrak{m}) = (c_1, r_{1, 1}, r_{1, 2}, ..., r_{v+1, 1}, r_{v+1, 2})\]
+    \item {\tt cc} (line 104) - Component \(c_1\) from aforementioned MLSAG signature
+    \item {\tt pseudoOuts} (lines 130-131) - Pseudo output commitments $C'^a_j$, as described in Section  \ref{sec:pedersen_monero}. Please recall that the sum of these commitments will equal the sum of the two output commitments of this transaction (plus the transaction fee commitment $f H$).
 \end{itemize}
 
 
@@ -300,8 +205,7 @@ What follows is a short explanation of the most important elements in this type 
 \chapter{Block Content}
 \label{appendix:block-content}
 
-In this section we show the structure of a sample block, namely the 1582196\nth block after the genesis block. The block has 5 transactions, and was added to the blockchain at timestamp 2018-05-27 21:56:01 UTC (as reported by the block's miner).
-
+In this appendix we show the structure of a sample block, namely the 1582196\nth block after the genesis block. The block has 5 transactions, and was added to the blockchain at timestamp 2018-05-27 21:56:01 UTC (as reported by the block's miner).
 
 \begin{Verbatim}[commandchars=\\\{\}, numbers=left]
 print_block 1582196
@@ -354,6 +258,7 @@ reward: 4634817937431
 \end{Verbatim}
 
 
+
 \section*{Block components}
 
 \begin{itemize}
@@ -362,23 +267,23 @@ reward: 4634817937431
     \item {\tt depth} (line 7) - In a blockchain copy, the depth of any given block is how far back in the chain it is relative to the most recent block.
     \item {\tt hash} (line 8) - This block's block ID.
     \item {\tt difficulty} (line 9) - Difficulty isn't stored in a block, since users can compute {\em all} block difficulties from block timestamps and the rules in Section \ref{sec:difficulty}.
-    \item {\tt major\_version} (line 12) - Corresponds to protocol version used to verify this block.
+    \item {\tt major\_version} (line 12) - Corresponds to the protocol version used to verify this block.
     \item {\tt minor\_version} (line 13) - Originally intended as a voting mechanism among miners, it now merely reiterates the {\tt major\_version}. Since the field does not occupy much space, the developers probably thought deprecating it would not be worth the effort.
     \item {\tt timestamp} (line 14) - An integer representation of this block's UTC timestamp, as reported by the block's miner.
     \item {\tt prev\_id} (line 15) - The previous block's block ID. Herein lies the essence of Monero's blockchain.
     \item {\tt nonce} (line 16) - The nonce used by this block's miner to pass its difficulty target. Anyone can recompute the proof of work and verify the nonce is valid.
     \item {\tt miner\_tx} (lines 17-40) - This block's miner transaction.
     \item {\tt version} (line 18) - Transaction format/era version; `2' corresponds to RingCT.
-    \item {\tt unlock\_time} (line 19) - The miner transaction's output can't be spent until 60 more blocks have been mined.
+    \item {\tt unlock\_time} (line 19) - The miner transaction's output can't be spent until the 1582256\nth block, after 59 more blocks have been mined (it is a 60 block lock time since it can't be spent until 60 block time intervals have passed, e.g. $2*60 = 120$ minutes).
     \item {\tt vin} (lines 20-25) - Inputs to the miner tx. There are none, since the miner tx is used to generate block rewards and collect transaction fees.
     \item {\tt gen} (line 21) - Short for `generate'.
-    \item {\tt height} (line 22) - The block height this miner tx's block reward was generated for. Each block height can only generate a block reward once.
+    \item {\tt height} (line 22) - The block height for which this miner tx's block reward was generated. Each block height can only generate a block reward once.
     \item {\tt vout} (lines 26-32) - Outputs of the miner tx.
     \item {\tt amount} (line 27) - Amount dispersed by the miner tx, containing block reward and fees from this block's transactions. Recorded in atomic units.
     \item {\tt key} (line 29) - One-time address assigning ownership of the miner tx's amount.
-    \item {\tt extra} (lines 33-36) - Extra information for the miner tx, including transaction public key.
+    \item {\tt extra} (lines 33-36) - Extra information for the miner tx, including the transaction public key.
     \item {\tt type} (line 38) - Type of transaction, in this case `0' for {\tt RCTTypeNull}, indicating a miner tx.
-    \item {\tt tx\_hashes} (line 41) - All transaction IDs included in this block (but not the miner tx ID).
+    \item {\tt tx\_hashes} (lines 41-46) - All transaction IDs included in this block (but not the miner tx ID, which is {\tt 06fb3e1cf889bb972774a8535208d98db164394ef2b14ecfe74814170557e6e9}).
 \end{itemize}
 
 
@@ -387,7 +292,7 @@ reward: 4634817937431
 \chapter{Genesis Block}
 \label{appendix:genesis-block}
 
-In this section we show the structure of the Monero genesis block. The block has 0 transactions (it just sends the first block reward to thankful\_for\_today \cite{bitmonero-launched}). Monero's founder did not add a timestamp, perhaps as a relic of Bytecoin, the coin Monero's code was forked from, whose creators apparently tried to hide a large pre-mine \cite{monero-history}.
+In this appendix we show the structure of the Monero genesis block. The block has 0 transactions (it just sends the first block reward to thankful\_for\_today \cite{bitmonero-launched}). Monero's founder did not add a timestamp, perhaps as a relic of Bytecoin, the coin Monero's code was forked from, whose creators apparently tried to hide a large pre-mine \cite{monero-history}, and may operate a shady network of cryptocurrency-related software and services \cite{bytecoin-network}.
 
 Block 1 was added to the blockchain at timestamp 2014-04-18 10:49:53 UTC (as reported by the block's miner), so we can assume the genesis block was created the same day. This corresponds with the launch date announced by thankful\_for\_today \cite{bitmonero-launched}.
 
@@ -435,6 +340,7 @@ reward: 17592186044415
 \end{Verbatim}
 
 
+
 \section*{Genesis block components}
 
 Since we used the same software to print the genesis block and the block from Appendix \ref{appendix:block-content}, the structure appears basically the same. We point out some unique differences.
@@ -446,8 +352,8 @@ Since we used the same software to print the genesis block and the block from Ap
 	\item {\tt nonce} (line 16) - $n = 10000$ by convention.
 	\item {\tt amount} (line 27) - This exactly corresponds to our calculation for the first block reward (17.592186044415 XMR) in Section \ref{subsec:block-reward}.
 	\item {\tt key} (line 29) - The very first Moneroj were dispersed to Monero's founder thankful\_for\_today.
-	\item {\tt extra} (line 33) - Using the encoding discussed in Appendix \ref{appendix:RCTTypeFull}, the genesis block's miner tx {\tt extra} field just contains one transaction public key.
-	\item {\tt signatures} (line 37) - There are no signatures in the genesis block. This is here as an artifact of the {\tt print\_block} function. The same is true for {\tt tx\_hashes} in line 38.
+	\item {\tt extra} (lines 33-36) - Using the encoding discussed in Appendix \ref{appendix:RCTTypeBulletproof2}, the genesis block's miner tx {\tt extra} field just contains one transaction public key.
+	\item {\tt signatures} (line 37) - There are no signatures in the genesis block. This is here as an artifact of the {\tt print\_block} function. The same is true for {\tt tx\_hashes} in line 39.
 \end{itemize}
 
 

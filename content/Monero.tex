@@ -3,6 +3,7 @@
 
 final chapter ties it all together (? technical enough to skip rest of report? might make it too long - aim to redirect to other parts of report)
 
+
 -curve ed25519
 -address creation
     -basic
@@ -13,6 +14,7 @@ final chapter ties it all together (? technical enough to skip rest of report? m
     -scan blockchain, look at output addresses, use view key and transaction public key to see if any spend keys match
     -organize results
 -building transaction
+    -structure of a transaction (how the data is serialized/organized and transmitted)
     -obtain addresses (or subaddresses) of intended recipients, specify amounts intended for each
     -from sending amounts + fee, select a set of owned outputs with amounts sum(a)>=(sum(b)+fee), and set change = sum(a) - (sum(b)+fee)
     -construct outputs:
@@ -36,4 +38,3 @@ final chapter ties it all together (? technical enough to skip rest of report? m
     -block published to network
     -block accepted or rejected (orphaned); consensus mechanism
     -[potential] signature data pruned
-
