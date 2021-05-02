@@ -4,7 +4,16 @@ This is a comprehensive conceptual (and technical) explanation of Monero. I will
 
 The first and second editions were published on getmonero.org in the Library section: https://web.getmonero.org/library/
 
-*Checksums*
+## PDFs
+
+Browsers with built-in PDF readers (e.g. recent versions of Firefox) can display PDFs with the following links. Non-supporting browsers may automatically download the PDF if you click the links.
+
+- English: [PDF link](https://raw.githubusercontent.com/UkoeHB/Monero-RCT-report/master/Zero-to-Monero-2-0-0.pdf)
+- Russian: [PDF link](https://raw.githubusercontent.com/UkoeHB/Monero-RCT-report/master/Zero-to-Monero-2-0-0-ru.pdf)
+
+
+
+## Checksums
 
 To calculate a checksum, open the terminal/command line and navigate into the folder containing the file you wish to check. Type 'shasum -a 256 file_name'.
 
@@ -13,7 +22,8 @@ First Edition checksum: 8e235da06fd96fe84701c3812ad47599985c0b72fe05ddd6e4af3c2f
 Second Edition checksum: a784a342141a6c237bdc1ef1c227e6865fae08b2a1b5f10aa4a47af01929a55a  Zero-to-Monero-2-0-0.pdf
 
 
-*Translations*
+
+## Translations
 
 ZtM is written in LaTeX, so it is not easily integrated with translation services like transifex. The unwieldy solution is to make new Github repositories for translation projects, which contributors can submit pull requests to.
 
@@ -26,11 +36,14 @@ ZtM is written in LaTeX, so it is not easily integrated with translation service
 Completed translations:
 
 -English (original)
+-Russian
 
 Current translations in progress:
 
 -(none that I know)
 
-*License*
+
+
+## License
 
 This repository is public domain.
