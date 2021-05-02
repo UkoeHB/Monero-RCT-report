@@ -35,12 +35,12 @@ ZtM is written in LaTeX, so it is not easily integrated with translation service
 
 Completed translations:
 
--English (original)
--Russian
+- English (original)
+- Russian
 
 Current translations in progress:
 
--(none that I know)
+- (none that I know)
 
 
 
