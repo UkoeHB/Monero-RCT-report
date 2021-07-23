@@ -40,7 +40,7 @@ Most modern cryptography begins with modular arithmetic, which in turn begins wi
 
 The positive modulus is similar to the `remainder' after dividing two numbers, e.g. $c$ the `remainder' of $a/b$. Let's imagine a number line. To calculate $c = a \pmod b$ we stand at point $a$ then walk toward zero with each $\text{step} = b$ until we reach an integer $\geq{0}$ and $<b$. That is $c$. For example, $4$ (modulo 3) $= 1$, $-5 \pmod 4 = 3$, and so on.
 
-Formally, the positive modulus is here defined for $c = a \pmod b$ as $a=bx+c$, where $0\leq{c}<{b}$ and $x$ is a signed integer which gets discarded ($b$ is a positive non-zero integer).
+Formally, the positive modulus is here defined for $c = a \pmod b$ as $a=bx+c$, where $0\leq{c}<{b}$ and $x$ is a signed integer which gets discarded ($b$ is a positive integer).
 
 Note that, if $a \leq n$, $-a \pmod n$ is the same as $n - a$.
 
