@@ -1,0 +1,1134 @@
+\chapter{Multi-assinaturas}
+\label{chapter:multisignatures}
+
+Transacções de cripto-moedas não são reversíveis. Se alguêm rouba as chaves privadas ou tem sucesso numa fraude, o dinheiro perdido pode nunca ser recuperado. Dividir o poder signatário entre pessoas pode enfraquecer o potential de algo correr mal. 
+
+%Cryptocurrency transactions are not reversible. If someone steals private keys or succeeds in a scam, the money lost could be gone forever. Dividing signing power between people can weaken the potential danger of a miscreant.
+
+Por exemplo alguem deposita dinheiro numa conta com uma empresa de segurança que vai monitorar actividade suspeita relacionada com essa conta. As transacções só podem ser assinadas se ambos os partidos cooperam. Se alguêm rouba as chaves, esta empresa de segurança pode ser alarmada, e como tal esta pára de assinar essas transacções. Isto é usualmente um serviço de garantia.
+
+%Say you deposit money into a joint account with a security company that monitors for suspicious activity related to your account. Transactions can only be signed if both you and the company cooperate. If someone steals your keys, you can notify the company there is a problem and the company will stop signing transactions for your account. This is usually called an `escrow' service.
+
+\footnote{Multi-assinaturas têm uma diversidade de aplicações, desde contas de corporações, subscrições de jornais até aos mercados online.}
+%Multi-assinaturas have a diversity of applications, from corporate accounts to newspaper subscriptions to online marketplaces.}\\
+
+Cripto-moedas utilizam uma técnica de `multi-assinatura' para alcançar assinaturas colaborativas chamada `M-de-N multisig'. Em M-de-N, N pessoas cooperam para fazer uma chave junta, e só M (M $\leq$ N) destas precisam de assinar com esta chave. Primeiro será introduzido o básico de `N-de-N multisig', depois `N-de-N multisig' em Monero, depois a geralização para `M-de-N multisig' e por fim será esplicado como pôr chaves de multi-assinatura dentro de outras chaves de multi-assinatura.
+
+%Cryptocurrencies use a `multisignature' technique to achieve collaborative signing with so-called `M-of-N multisig'. In M-of-N, N people cooperate to make a joint key, and only M people (M $\leq$ N) are needed to sign with that key. We begin this chapter by introducing the basics of N-of-N multisig, progress into N-of-N Monero multisig, generalize for M-of-N multisig, and then explain how to nest multisig keys inside other multisig keys.\\
+
+Neste capítulo apresenta-se como as Multi-assinaturas {\em deviam} ser feitas, baseado nas recomendações em \cite{MRL-0009-multisig}, e várias observações sobre implementações eficientes. Tenta-se mostrar em notas de rodapé quando a implementação actual desvia daquilo que é descrito. 
+
+%In this chapter we focus on how we feel multisig {\em should} be done, based on the recommendations in \cite{MRL-0009-multisig}, and various observations about efficient implementation. We try to point out in footnotes where the current implementation deviates from what is described.
+\footnote{Actualmente existem 3 tipos de implementações de multi-assinaturas. A primeira é um processo muito básico e manual que usa a {\em cli} (interface da linha de comando)\cite{cli-22multisig-instructions}. Segundo existe o excelente MMS (sistema de mensagens de multi-assinatura, do inglés : {\em Multisig Messaging System}), que é altamente automatizado através da {\em cli} \cite{mms-manual, mms-project-proposal}. Terçeiro existe a carteira comercialmente disponível que se chama `Exa Wallet', cuja código fonte inicial está em : \url{https://github.com/exantech}. Todas estas implementações baseiam-se no mesmo código fonte, da equipa núcleo de Monero, ou seja práticamente estas são todas a mesma.}  
+
+%As of this writing we are aware of three multisig implementations. First is a very basic manual process using the CLI (command line interface) \cite{cli-22multisig-instructions}. Second is the truly excellent MMS (Multisig Messaging System) which enables secure, highly automated multisig via the CLI \cite{mms-manual, mms-project-proposal}. Third is the commercially available `Exa Wallet', which has initial release code available on their Github repository at \url{https://github.com/exantech} (it does not appear up to date with current release version). All three of these rely on the same fundamental core team's codebase, which essentially means only one implementation exists.} 
+%Our contributions are detailing M-of-N multisig, and a novel approach to nesting multisig keys.
+
+\section{Comunicação entre co-signatários}
+\label{sec:communicating}
+
+Construir chaves juntas e transacções juntas requere comunicar informação secreta entre pessoas que podem estar em qualquer parte do globo. Para manter essa informação segura de observadores, co-signatários precisam de encriptar as mensagens que são enviadas mutuamente. 
+
+Uma troca tipo diffie hellman com curvas elípticas é uma maneira muito simples de encriptar mensagens com pontos de curva elíptica. Isto já foi mencionado na secção \ref{sec:pedersen_monero}, em que montantes de saída são comunicados ao destinatário através do segredo partilhado $r K^v$ :  
+%Building joint keys and joint transactions requires communicating secret information between people who could be located all around the globe. To keep that information secure from observers, co-signers need to encrypt the messages they send each other.
+
+%Diffie-Hellman exchange (ECDH) is a very simple way to encrypt messages using elliptic curve cryptography. We already mentioned this in Section \ref{sec:pedersen_monero}, where Monero output amounts are communicated to recipients via the shared secret $r K^v$. It looked like this:\vspace{.175cm}
+\begin{align*}
+\mathit{montante}_t = b_t \oplus_8 \mathcal{H}_n(``montante”, \mathcal{H}_n(r K_B^v, t))
+\end{align*}
+
+Isto pode facilmente ser extendido a qualquer mensagem. Primeiro a mensagem é codificada como uma série de bits, depois particiona-se isso em partes iguais dependendo do comprimento de $\mathcal{H}_n$. Gera-se um número aleatório $r \in \mathbb{Z}_l$ e faz-se uma troca tipo Diffie-Hellman em todas as partes usando a chave pública do destinatário $K$. As partes, agora encriptadas, são enviadas ao destinatário com a chave pública $r G$. Este desencripta a mensagem com o segredo partilhado $k r G$.\newline Remetentes de mensagens deviam também criar uma assinatura na mensagem encriptada (ou só a hash da mensagem encriptada), tal que destinatários possam confirmar que as mensagens não foram alteradas (uma assinatura só é verificável com a mensagem correcta $\mathfrak{m}$).   
+
+%We could easily extend this to any message. First encode the message as a series of bits, then break it into chunks equal in size to the output of $\mathcal{H}_n$. Generate a random number $r \in \mathbb{Z}_l$ and perform a Diffie-Hellman exchange on all the message chunks using the recipient's public key $K$. Send those encrypted chunks along with the public key $r G$ to the intended recipient, who can then decrypt the message with the shared secret $k r G$. Message senders should also create a signature on their encrypted message (or just the encrypted message's hash for simplicity) so receivers can confirm messages weren't tampered with (a signature is only verifiable on the correct message $\mathfrak{m}$).
+
+Leitores curiosos \marginnote{src/wallet/ wallet2.cpp {\tt export\_ multisig()}}podem olhar para este resumo conceptual : \cite{tutorialspoint-cryptography}, ou ver uma descrição técnica do esquema de encriptação popular AES aqui : \cite{AES-encryption}. Dr. Bernstein desenvolveu um esquema de encriptação conhecido como ChaCha \cite{Bernstein_chacha,chacha-irtf}, que a primeira implementação de Monero utiliza para encriptar certas informações sensitivas \marginnote{src/wallet/ ringdb.cpp} relacionada com as carteiras dos utilizadores (tal como as imagens de chave de saídas de transacção).   
+
+%Since encryption\marginnote{src/wallet/ wallet2.cpp {\tt export\_ multisig()}} is not essential to the operation of a cryptocurrency like Monero, we do not feel it necessary to go into more detail. Curious readers can look at this excellent conceptual overview \cite{tutorialspoint-cryptography}, or see a technical description of the popular AES encryption scheme here \cite{AES-encryption}. Also, Dr. Bernstein developed an encryption scheme known as ChaCha \cite{Bernstein_chacha,chacha-irtf}, which the primary Monero implementation uses to encrypt certain sensitive information\marginnote{src/wallet/ ringdb.cpp} related to users' wallets (such as key images for owned outputs).
+
+\section{Agregação de chaves para endereços}
+\label{sec:key-aggregation}
+
+\subsection{Abordagem ingénua}
+\label{sec:naive-key-aggregation}
+
+Seja que N pessoas querem criar um endereço de multi-assinatura, que é :
+\begin{align*}
+(K^{v,grp},K^{s,grp}).
+\end{align*}
+Montantes podem ser enviados a esse endereço como para cada endereço normal, mas para gastar esses fundos, todas as N pessoas tem de trabalhar juntamente para assinar transacções.
+
+%Let's say N people want to create a group multisignature address, which we denote $(K^{v,grp},K^{s,grp})$. Funds can be sent to that address just like any normal address, but, as we will see later, to spend those funds all N people have to work together to sign transactions.
+
+Desde que todos os N participantes deviam poder ver os montantes recebidos pelo endereço de grupo, a chave de ver é dada a cada participante :
+\begin{align*}
+k^{v,grp} .
+\end{align*}
+
+Para que cada participante tenha o mesmo poder, a chave de ver pode ser a soma de componentes que todos os participantes enviam uns aos outros de forma segura. Para o participante $e \in \{1,...,N\}$, a chave de ver é a componente base : 
+\begin{align*}
+k^{v,base}_e \in_R \mathbb{Z}_l . 
+\end{align*}
+
+Todos os participantes podem calcular a chave de ver privada do grupo :
+\begin{align*}
+k^{v,grp} = \sum^{N}_{e=1} k^{v,base}_e . 
+\end{align*}
+
+
+%Since all N participants should be able to view funds received by the group address, we can let everyone know the group view key $k^{v,grp}$ (recall Sections \ref{sec:user-keys} and \ref{sec:one-time-addresses}). To give all participants equal power, the view key can be a sum of view key components that all participants send each other securely. For participant $e \in \{1,...,N\}$, his base view key component is $k^{v,base}_e \in_R \mathbb{Z}_l$, and all participants can compute the group private view key
+\marginnote{src/multi- sig/multi- sig.cpp {\tt generate\_ multisig\_ view\_sec- ret\_key()}}
+%\[k^{v,grp} = \sum^{N}_{e=1} k^{v,base}_e\]
+
+De forma similar, a chave de gasto do grupo :
+\begin{align*}
+K^{s,grp} = k^{s,grp} G ,
+\end{align*}
+
+poderia ser a soma de componentes base de chaves privadas de gasto. Contudo, se alguêm sabe todas essas componentes, então sabe a chave privada total de gasto. E como tal pode assinar transacções. Não seria uma multi-assinatura, só uma assinatura normal. 
+
+%In a similar fashion, the group spend key $K^{s,grp} = k^{s,grp} G$ could be a sum of private spend key base components. However, if someone knows all the private spend key components then they know the total private spend key. Add in the private view key and he can sign transactions on his own. It wouldn't be multisignature, just a plain old signature.
+
+%??? why add in the private view key ?
+
+Em vez disso,\marginnote{src/multi- sig/multi- sig.cpp {\tt generate\_ multisig\_ N\_N()}} obtem-se o mesmo efeito se a chave de gasto do grupo é a soma de chaves públicas de gasto.
+Seja que os participantes têm chaves base de gasto públicas $K^{s,base}_e$ que eles enviam uns aos outros de forma segura. Então cada um calcula : 
+\begin{align*}
+K^{s,grp} = \sum_e K^{s,base}_e .
+\end{align*}
+
+%Instead,\marginnote{src/multi- sig/multi- sig.cpp {\tt generate\_ multisig\_ N\_N()}} we get the same effect if the group spend key is a sum of public spend keys. Say the participants have base public spend keys $K^{s,base}_e$ which they send each other securely. Now let them each compute
+
+O que é o mesmo que :
+\begin{align*}
+K^{s,grp} = (\sum_e k^{s,base}_e)*G .
+\end{align*}
+
+\subsection{Desvantagens da abordagem ingénua}
+\label{subsec:drawbacks-naive-aggregation-cancellation}
+
+Usar a soma de chaves públicas de gasto é intuitivo, mas leva a uma serie de questões.
+%Using a sum of public spend keys is intuitive and seemingly straightforward, but leads to a couple issues.
+
+\subsubsection*{Teste de agregação a uma chave}
+Um adversário exterior que conheça todas as chaves base públicas de gasto $K^{s,base}_e$,
+pode testar um dado endereço público $(K^v,K^s)$ para a agregação de chave ao calcular :
+\begin{align*}
+K^{s,grp} = \sum_e K^{s,base}_e ,
+\end{align*}
+e verificar se :
+\begin{align*}
+K^s \stackrel{?}{=} K^{s,grp} .
+\end{align*}
+
+Isto une-se a um requisito mais genérico que chaves agregadas sejam indistingíveis de chaves normais, tal que observadores externos não possam ganhar conhecimento das actividades dos monerianos dependendo do tipo de endereço publicado.
+%An outside adversary who knows all the base public spend keys $K^{s,base}_e$ can trivially test a given public address $(K^v,K^s)$ for key aggregation by computing $K^{s,grp} = \sum_e K^{s,base}_e$ and checking $K^s \stackrel{?}{=} K^{s,grp}$. 
+%This ties in with a broader requirement that aggregated keys be indistinguishable from normal keys, so observers can't gain any insight into users' activities based on the kind of address they publish.
+\footnote{Se pelo menos existe um participante honesto, que utiliza componentes seleccionados de forma aleatória seguindo uma distribuição aleatória, então as chaves agregadas por uma soma simples são indistinguíveis \cite{SCOZZAFAVA1993313} de chaves normais.}
+%If at least one honest participant uses components selected randomly from a uniform distribution, then keys aggregated by a simple sum are indistinguishable \cite{SCOZZAFAVA1993313} from normal keys.}%cite multisig paper
+
+Pode-se evitar isto ao criar novas chaves base de gasto para cada endereço de multi-assinatura. O que é fácil mas pode ser inconveniente. A segunda opção é mascarar chaves velhas. 
+%We can get around this by creating new base spend keys for each multisignature address, or by masking old keys. The former case is easy, but may be inconvenient.
+%??? what old keys?
+Procede-se da seguinte forma : \newline dado um participante $e$ com um par de chaves públicas : 
+\begin{align*}
+(K^v_e,K^s_e) ,
+\end{align*}
+com chaves privadas :
+\begin{align*}
+(k^v_e,k^s_e)
+\end{align*}
+e máscaras aleatórias $\mu^v_e,\mu^s_e$. Sejam os componentes de chave base privada para o endereço de grupo :
+\begin{align*}
+    k^{v,base}_e &= \mathcal{H}_n(k^v_e,\mu^v_e)\\
+    k^{s,base}_e &= \mathcal{H}_n(k^s_e,\mu^s_e)
+\end{align*}
+  
+%The second case proceeds like this: given participant $e$'s old key pair $(K^v_e,K^s_e)$ with private keys $(k^v_e,k^s_e)$ and random masks $\mu^v_e,\mu^s_e$,
+\footnote{As máscaras aleatórias são fácilmente derivadas de um password. Por exemplo, $\mu^s = \mathcal{H}_n(password)$ e $\mu^v = \mathcal{H}_n(\mu^s)$. Ou então como é feito em Monero, as chaves de ver e de gasto são mascaradas com uma string \marginnote{src/multisig/ multisig.cpp {\tt get\_multi- sig\_blind- ed\_secret \_key()}} e.g. $\mu^s,\mu^v =$ ``Multisig". Isto implica que Monero só suporta uma chave de base de multi-assinatura para cada endereço. Na realidade tornar uma carteira normal para uma carteira de multi-assinatura faz com que o moneriano perca acesso á carteira normal \cite{cli-22multisig-instructions}. É necessário criar uma nova carteira para voltar a aceder os fundos desse endereço.}
+%The random masks could easily be derived from some password. For example, $\mu^s = \mathcal{H}_n(password)$ and $\mu^v = \mathcal{H}_n(\mu^s)$. Or, as is done in Monero, mask the spend and view keys with a string\marginnote{src/multisig/ multisig.cpp {\tt get\_multi- sig\_blind- ed\_secret \_key()}} e.g. $\mu^s,\mu^v =$ ``Multisig". This implies Monero only supports one multisig base spend key per normal address, although in reality making a wallet multisig causes users to lose access to the original wallet \cite{cli-22multisig-instructions}. Users must make a new wallet with their normal address to access its funds, assuming the multisig wasn't made from a brand new normal address.} 
+%let his new base private key components for the group address be
+Se os participantes não querem que observadores reúnam as novas chaves e as testem para agregação de chave, eles teriam de comunicar os seus novos componentes de chave uns aos outros de forma segura. 
+%If participants don't want observers to gather the new keys and test for key aggregation, they would have to communicate their new key components to each other securely.
+\footnote{Como veremos na secção \ref{sec:smaller-thresholds}, a agregação de chave não funciona em multi-assinaturas em que M $<$ N, devido á presença de segredos partilhados.} 
+%As we will see in Section \ref{sec:smaller-thresholds}, key aggregation does not work on M-of-N multisig when M $<$ N due to the presence of shared secrets.}
+Se testes de agregação de chave não são uma preocupação, então os componentes de chave base pública :
+\begin{align*}
+(K^{v,base}_e,K^{s,base}_e) 
+\end{align*}
+podem ser publicados como endereços normais. Qualquer entidade terceira podia então a partir desses endereços individuais, calcular e enviar montantes para o endereço de grupo. Sem interacção com os destinatários do grupo \cite{maxwell2018simple-musig}.
+%If key aggregation tests are not a concern, they could publish their public key base components $(K^{v,base}_e,K^{s,base}_e)$ as normal addresses. Any third party could then compute the group address from those individual addresses and send funds to it, without interacting with any of the joint recipients \cite{maxwell2018simple-musig}.
+
+\subsubsection*{Cancelamento de chave}
+
+Se a chave de gasto do grupo é uma soma de chaves públicas, um participante deshonesto que descobre os componentes de chaves base de gasto, dos outros participantes, pode cancelar estes componentes.
+%??? what does it mean ahead of time ?  
+%If the group spend key is a sum of public keys, a dishonest participant who learns his collaborators' spend key base components ahead of time can cancel them.
+
+Por exemplo, seja que a alice e o bob querem fazer um endereço de grupo. A alice bem intencionada, diz ao bob os seus componentes de chave : 
+\begin{align*} 
+(k^{v,base}_A,K^{s,base}_A) .
+\end{align*}
+O bob calcula os seus componentes privadamente :
+\begin{align*}
+(k^{v,base}_B,K^{s,base}_B) ,
+\end{align*}
+mas não diz algo a alice. Em vez disso ele calcula :
+\begin{align*}
+K'^{s,base}_B = K^{s,base}_B - K^{s,base}_A ,
+\end{align*}
+e diz a alice :
+\begin{align*}
+(k^{v,base}_B,K'^{s,base}_B) .
+\end{align*}
+O endereço de grupo é :
+\begin{align*}
+    K^{v,grp} &= (k^{v,base}_A + k^{v,base}_B) G \\
+             &= k^{v,grp} G\\
+    K^{s,grp} &= K^{s,base}_A + K'^{s,base}_B \\
+             &= K^{s,base}_A + (K^{s,base}_B - K^{s,base}_A)\\
+             &= K^{s,base}_B .
+\end{align*}
+Isto resulta num endereço de grupo : 
+\begin{align*}
+(k^{v,grp} G,K^{s,base}_B) .
+\end{align*}
+%??? K^{s,base}_B, não é uma chave privada !
+Em que a alice sabe a chave de ver privada do grupo, e o bob sabe essa {\em e} também a chave privada de gasto !\newline O bob pode assinar as transacções por ele próprio, enganando a alice, que acredita que os montantes enviados para esse endereço só podem ser gastos, com a permissão dela.
+
+ 
+%For example, say Alice and Bob want to make a group address. Alice, in good faith, tells Bob her key components $(k^{v,base}_A,K^{s,base}_A)$. Bob privately makes his key components $(k^{v,base}_B,K^{s,base}_B)$ but doesn't tell Alice right away. Instead, he computes $K'^{s,base}_B = K^{s,base}_B - K^{s,base}_A$ and tells Alice $(k^{v,base}_B,K'^{s,base}_B)$. The group address is:\vspace{.175cm}
+%This leaves a group address $(k^{v,grp} G,K^{s,base}_B)$ where Alice knows the private group view key, and Bob knows both the private view key {\em and} private spend key! Bob can sign transactions on his own, fooling Alice, who might believe funds sent to the address can only be spent with her permission.
+
+Isto poderia ser resolvido ao requerer que cada participante, antes de agregar chaves, faça uma assinatura que prova que este sabe a chave privada correspondente ao componente da chave de gasto \cite{old-multisig-mrl-note}.Isto é inconveniente e vulnerável a erros de implementação. Felizmente existe uma sólida alternativa. 
+%We could solve this issue by requiring each participant, before aggregating keys, to make a signature proving they know the private key to their spend key component \cite{old-multisig-mrl-note}.
+\footnote{A primeira iteração (ainda a mesma actualmente) de multi-assinaturas, disponibilizada em abril de 2018 \cite{lithiumluna-v7} (com a integração de M-de-N em outubro de 2018 \cite{berylliumbullet-v8})
+Monero's current (and first) iteration of multisig, made available in April 2018 \cite{lithiumluna-v7} (with M-of-N integration following in October 2018 \cite{berylliumbullet-v8}), used this naive key aggregation, and required users sign\marginnote{src/wallet/ wallet2.cpp {\tt get\_multi- sig\_info()}} their spend key components.}
+%???Monero's current (and first) iteration, used this ? Or uses? 
+%This is inconvenient and vulnerable to implementation mistakes. Fortunately a solid alternative is available.%by required did I mean, they must do it on their own time; not part of multisig workflow to automatically happen
+\subsection{Agregação de chave robusta}
+\label{sec:robust-key-aggregation}
+
+Para facilmente resistir ao cancelamento de chave faz-se uma pequena alteração á agregação das chaves de gasto ( deixando a agregação das chaves de ver igual ). 
+Seja que o conjunto de N signatários tenham componentes de chave base de gasto :
+\begin{align*}
+\mathbb{S}^{base} = \{K^{s,base}_1,...,K^{s,base}_N\} ,
+\end{align*}
+que estão ordenados seguindo uma convenção qualquer, de mínimo para máximo, ou de forma lexicográfica.\newline A robusta chave de gasto agregada é :
+%To easily resist key cancellation we make a small change to spend key aggregation (leaving view key aggregation the same). Let the set of N signers' base spend key components be $\mathbb{S}^{base} = \{K^{s,base}_1,...,K^{s,base}_N\}$, ordered according to some convention (such as smallest to largest numerically, i.e. lexicographically).\footnote{$\mathbb{S}^{base}$ needs to be ordered consistently so participants can be sure they are all hashing the same thing.} The robust aggregated spend key is \cite{MRL-0009-multisig}\footnote{Recalling Section \ref{sec:CLSAG}, hash functions should be domain separated by prefixing them with tags, e.g. $T_{agg} =$ ``Multisig\_Aggregation". We leave tags out for examples like the next section's Schnorr signatures.}\footnote{It is important to include $\mathbb{S}^{base}$ in the aggregation hashes to avoid sophisticated key cancellation attacks involving Wagner's generalized solution to the birthday problem \cite{generalized-birthday-wagner}. \cite{adam-wagnerian-tragedies} \cite{maxwell2018simple-musig}}\vspace{.175cm}
+\begin{align*}
+K^{s,grp} = \sum_e \mathcal{H}_n(T_{agg},\mathbb{S}^{base},K^{s,base}_e)K^{s,base}_e
+\end{align*}
+
+%Now if Bob tries to cancel Alice's spend key, he gets stuck with a very difficult problem.
+Se o bob tenta cancelar a chave de gasto da alice, ele fica preso com um problema díficil :
+\vspace{.175cm}
+\begin{align*}
+    K^{s,grp} &= \mathcal{H}_n(T_{agg},\mathbb{S},K^{s}_A)K^{s}_A + \mathcal{H}_n(T_{agg},\mathbb{S},K'^{s}_B)K'^{s}_B \\
+             &= \mathcal{H}_n(T_{agg},\mathbb{S},K^{s}_A)K^{s}_A + \mathcal{H}_n(T_{agg},\mathbb{S},K'^{s}_B)K^{s}_B - \mathcal{H}_n(T_{agg},\mathbb{S},K'^{s}_B)K^{s}_A \\
+             &= [\mathcal{H}_n(T_{agg},\mathbb{S},K^{s}_A) - \mathcal{H}_n(T_{agg},\mathbb{S},K'^{s}_B)]K^{s}_A + \mathcal{H}_n(T_{agg},\mathbb{S},K'^{s}_B)K^{s}_B
+\end{align*}
+
+%??? what problem ? We leave Bob's frustration to the reader's imagination.
+
+Da mesma forma que com a abordagem ingénua, qualquer terceiro que saiba $\mathbb{S}^{base}$ e as chaves públicas correspondentes, pode calcular o endereço de grupo.\newline Como os participantes não precisam de provar que sabem as chaves privadas de gasto, e também não precisam de interagir de todo antes de assinar as transacções, esta agregação de chave robusta segue o modelo {\em simples de chave-pública}. O único requisito neste modelo é que cada participante e potencial signatário tenha uma chave pública \cite{maxwell2018simple-musig}.
+
+%Just like with the naive approach, any third party who knows $\mathbb{S}^{base}$ and the corresponding public view keys can compute the group address.
+%Since participants don't need to prove they know their private spend keys, or really interact at all before signing transactions, our robust key aggregation meets the so-called {\em plain public-key model}, where ``the only requirement is that each potential signer has a public key"\cite{maxwell2018simple-musig}.
+\footnote{A agregação de chave só satisfaz o modelo de chave-pública para multi-assinaturas N-de-N e 1-de-N.}
+%As we will see later, key aggregation only meets the plain public-key model for N-of-N and 1-of-N multisig.}
+
+\subsubsection*{Funções {\tt premerge} e {\tt merge}}
+
+Mais formalmente e para ser mais claro, diz-se que existe uma operação {\tt premerge}, que tem como argumento um conjunto de chaves base $\mathbb{S}^{base}$, e tem como resultado um conjunto de chaves agregadas $\mathbb{K}^{agg}$ de igual tamanho. Em que $\mathbb{K}^{agg}[e]$ é o $n-ésimo$ elemento do conjunto :
+\begin{align*}
+\mathbb{K}^{agg}[e] = \mathcal{H}_n(T_{agg},\mathbb{S}^{base},K^{s,base}_e)K^{s,base}_e
+\end{align*}
+
+%More formally, and for the sake of clarity going forward, we can say there is an operation {\tt premerge} which takes in a set of base keys $\mathbb{S}^{base}$, and outputs a set of aggregation keys $\mathbb{K}^{agg}$ of equal size, where element\footnote{Notation: $\mathbb{K}^{agg}[e]$ is the e\nth element of the set.}
+%\[\mathbb{K}^{agg}[e] = \mathcal{H}_n(T_{agg},\mathbb{S}^{base},K^{s,base}_e)K^{s,base}_e\]
+
+As chaves privadas de agregação $k^{agg}_e$, são usadas em assinaturas de grupo.
+%The aggregation private keys $k^{agg}_e$ are used in group signatures.
+\footnote{A agregação robusta de chave ainda não foi implementada em Monero, mas como os participantes guardam e usam a chave privada $k^{agg}_e$ (para a agregação de chave ingénua : $k^{agg}_e = k^{base}_e$), actualizar Monero para usar a agregação robusta de chave só irá alterar o processo de {\em premerge}.}
+%Robust key aggregation has not yet been implemented in Monero, but since participants can store and use private key $k^{agg}_e$ (for naive key aggregation, $k^{agg}_e = k^{base}_e$)}
+Existe uma outra operação {\tt merge}, que usa as chaves de agregação de {\tt premerge} e constroi a chave signatária de grupo ( de gasto ):
+\vspace{.175cm}
+\begin{align*}
+K^{grp} = \sum_e \mathbb{K}^{agg}[e]
+\end{align*}
+
+%There is another operation {\tt merge} which takes the aggregation keys from {\tt premerge} and constructs the group signing key (e.g. spend key for Monero)\vspace{.175cm}
+
+Estas funções são generalizadas para (N-1)-de-N e M-de-N na secção \ref{sec:n-1-of-n}, e também para multi-assinaturas inclusivas na secção \ref{subsec:nesting-multisig-keys}.
+%We generalize these functions for (N-1)-of-N and M-of-N in Section \ref{sec:n-1-of-n}, and further generalize them for nested multisig in Section \ref{subsec:nesting-multisig-keys}.
+
+\section{Assinaturas tipo Schnorr com limite}
+\label{sec:threshold-schnorr}
+
+É preciso um certo número de signatários para que uma multi-assinatura funcione, portanto diz-se que existe um `limite' de signatários abaixo do qual a assinatura não pode ser produzida. Uma multi-assinatura com N participantes que requer que todos assinem, tem um limite de N, e chama-se {\em multi-assinatura N-de-N}.     
+%It takes a certain amount of signers for a multisignature to work, so we say there is a `threshold' of signers below which the signature can't be produced. A multisignature with N participants that requires all N people to build a signature, usually referred to as {\em N-of-N multisig}, would have a threshold of N. Later we will extend this to M-of-N (M $\leq$ N) multisig where N participants create the group address but only M people are needed to make signatures.
+
+Todos os esquemas de assinatura neste documento, baseiam-se na prova de conhecimento genérica de {\em Maurer} (com conhecimento nulo \cite{simple-zk-proof-maurer}). Portanto mostra-se a forma essencial de uma assinatura com limite tipo Schnorr (secção \ref{sec:signing-messages}) \cite{old-multisig-mrl-note}.
+  
+%Let's take a step back from Monero. All signature schemes in this document lead from Maurer's general zero-knowledge proof of knowledge \cite{simple-zk-proof-maurer}, so we can demonstrate the essential form of thresholded signatures using a simple Schnorr-like signature (recall Section \ref{sec:signing-messages}) \cite{old-multisig-mrl-note}.
+
+
+\subsection*{Assinatura}
+
+Sejam N pessoas em que cada uma tem uma chave pública no conjunto $\mathbb{K}^{agg}$. Cada pessoa $e \in \{1,...,N\}$, também sabe a chave privada $k^{agg}_e$.\newline A chave de grupo pública N-de-N que irá ser usada para assinar mensagens é $K^{grp}$. \newline Seja que todos os participantes querem assinar uma mensagem $\mathfrak{m}$. Uma assinatura tipo Schnorr básica é feita com colaboração da seguinte forma : 
+%Say there are N people who each have a public key in the set $\mathbb{K}^{agg}$, where each person $e \in \{1,...,N\}$ knows the private key $k^{agg}_e$. Their N-of-N group public key, which they will use to sign messages, is $K^{grp}$. Suppose they want to jointly sign a message $\mathfrak{m}$. They could collaborate on a basic Schnorr-like signature like this
+\begin{enumerate}
+    \item Cada participante $e \in \{1,...,N\}$ faz o seguinte :
+    \begin{enumerate}
+        \item escolhe um componente aleatório $\alpha_e \in_R \mathbb{Z}_l$,
+        \item calcula $\alpha_e G$
+        \item compromete-se através de $C^{\alpha}_e = \mathcal{H}_n(T_{com},\alpha_e G)$,
+        \item e envia $C^{\alpha}_e$ aos outros participantes de forma segura.
+    \end{enumerate}
+    \item uma vez que todos os compromissos $C^{\alpha}_e$ foram coleccionados, cada participante envia o seu $\alpha_e G$ aos outros participantes de forma segura.\newline Cada participante verifica que :
+\begin{align*} 
+C^{\alpha}_e \stackrel{?}{=} \mathcal{H}_n(T_{com},\alpha_e G) ,
+\end{align*}
+para cada um dos outros participantes.
+    \item Cada participante calcula 
+    \[ \alpha G = \sum_e \alpha_e G \]
+    \item Cada participante $e \in \{1,...,N\}$ faz o seguinte :
+\footnote{É importante não re-utilizar $\alpha_e$ para diferentes desafios $c$. Isto significa que recomeçar um processo de multi-assinatura em que as respostas já foram enviadas, um recomeço implica um iniciar de novo com novos valores $\alpha_e$.}
+%As in Section \ref{sec:schnorr-fiat-shamir}, it is important not to reuse $\alpha_e$ for different challenges $c$. This means to reset a multisignature process where responses have been sent out, it should start again from the beginning with new $\alpha_e$ values.}
+    \begin{enumerate}
+        \item calcula o desafio $c = \mathcal{H}_n(\mathfrak{m},[\alpha G])$,
+        \item define a componente resposta $r_e = \alpha_e - c* k^{agg}_e \pmod l$,
+        \item e envia $r_e$ aos outros participantes de forma segura.
+    \end{enumerate}
+    \item Cada participante calcula
+    \[ r = \sum_e r_e\]
+    \item Qualquer participante pode publicar a assinatura :
+\begin{align*}
+\sigma(\mathfrak{m}) = (c,r) .
+\end{align*}
+\end{enumerate}
+
+
+\subsection*{Verificação}
+
+Dado $K^{grp}$, $\mathfrak{m}$, e $\sigma(\mathfrak{m}) = (c,r)$:
+\begin{enumerate}
+    \item Calcula-se o desafio $c' = \mathcal{H}_n(\mathfrak{m},[r G + c*K^{grp}])$.
+    \item Se $c = c'$, então a assinatura é legítima (enp).
+\end{enumerate}
+
+O sobrescrito $grp$ foi incluído para a claridade, mas na realidade o verificador não tem maneira alguma de saber que $K^{grp}$ é uma chave junta. Só se ele sabe os componentes base ou de agregação. 
+
+%We included the superscript $grp$ for clarity, but in reality the verifier has no way to tell $K^{grp}$ is a merged key unless a participant tells him, or unless he knows the base or aggregation key components.
+
+
+\subsection*{Funciona porque}
+
+A resposta $r$ é central nesta assinatura. O participante $e$ sabe dois segredos em $r_e$ ($\alpha_e$ and $k^{agg}_e$), assim a sua chave privada $k^{agg}_e$ está segura em termos da teoria da informação, dos outros participantes (assumindo que ele nunca re-usa $\alpha_e$ ). Para mais, os verificadores usam a chave de grupo pública $K^{grp}$, assim todos os componentes de chave são necessários para construir assinaturas.
+%Response $r$ is the core of this signature. Participant $e$ knows two secrets in $r_e$ ($\alpha_e$ and $k^{agg}_e$), so his private key $k^{agg}_e$ is information-theoretically secure from other participants (assuming he never reuses $\alpha_e$). Moreover, verifiers use the group public key $K^{grp}$, so all key components are needed to build signatures.
+\begin{align*}
+    r G &= (\sum_e r_e) G \\
+      &= (\sum_e (\alpha_e - c*k^{agg}_e)) G \\
+      &= (\sum_e \alpha_e) G - c*(\sum_e k^{agg}_e) G \\
+      &= \alpha G - c*K^{grp} \\
+    \alpha G &= r G + c*K^{grp} \\
+    \mathcal{H}_n(\mathfrak{m},[\alpha G]) &= \mathcal{H}_n(\mathfrak{m},[r G + c*K^{grp}]) \\
+    c &= c'
+\end{align*}
+
+
+\subsection*{Passo adicional de comprometer e revelar}
+
+O leitor pode estar a questionar-se de onde veio o segundo passo. Sem comprometer e revelar \cite{MRL-0009-multisig}, um co-signatário malicioso podia aprender todos os $\alpha_e G$ {\em antes} do desafio ser calculado.\newline Isto permite-lhe controlar o desafio produzido a um certo grau, ao modificar o seu próprio $\alpha_e G$ antes de o enviar para fora.\newline Ele pode usar as componentes de resposta coleccionados de múltiplas assinaturas controladas para derivar outras chaves privadas $k^{agg}_e$ em tempo sub-exponential\cite{cryptoeprint:2018:417}. O que é uma ameaça séria de segurança.\newline Esta ameaça baseia-se na generalização \cite{generalized-birthday-wagner} (veja também \cite{adam-wagnerian-tragedies} para uma explicação mais intuitiva) do problema do dia de anos \cite{birthday-problem} \footnote{Comprometer e revelar não é usado na implementação actual de multi-assinaturas em Monero, no entanto está a ser considerado para um lançamento futuro \cite{multisig-research-issue-67}.}.  
+
+%The reader may be wondering where Step 2 came from. Without commit-and-reveal \cite{MRL-0009-multisig}, a malicious co-signer could learn all $\alpha_e G$ {\em before} the challenge is computed. This lets him control the challenge produced to some degree, by modifying his own $\alpha_e G$ prior to sending it out. He can use the response components collected from multiple controlled signatures to derive other signers' private keys $k^{agg}_e$ in sub-exponential time \cite{cryptoeprint:2018:417}, a serious security threat. This threat relies on Wagner's generalization \cite{generalized-birthday-wagner} (see also \cite{adam-wagnerian-tragedies} for a more intuitive explanation) of the birthday problem \cite{birthday-problem}.  
+%Commit-and-reveal is not used in the current implementation of Monero multisig, although it is being looked at for future releases. \cite{multisig-research-issue-67}}
+
+
+
+\section{MLSTAG assinaturas confidenciais em anel de Monero}
+\label{sec:MLSTAG-RingCT}
+
+Transacções confidenciais em aneis com limite, adicionam alguma complexidade porque chaves signatárias MLSTAG (MLSAG com o T de {\em threshold} do inglés : limite, barreira) são endereços ocultos e compromissos a zero para os montantes de entrada.
+ 
+%Monero thresholded ring confidential transactions add some complexity because MLSTAG (thresholded MLSAG) signing keys are one-time addresses and commitments to zero (for input amounts).
+
+Um endereço oculto que dá posse á $t-ésima$ saída a quem tiver o endereço público $(K^v_t,K^s_t)$ funciona da seguinte forma :
+%Recalling Section \ref{sec:multi_out_transactions}, a one-time address assigning ownership of a transaction's $t$\nth output to whoever has public address $(K^v_t,K^s_t)$ goes like this\vspace{.175cm}
+\begin{align*}
+  K_t^o &= \mathcal{H}_n(r K_t^v, t)G + K_t^s = (\mathcal{H}_n(r K_t^v, t) + k_t^s)G  \\ 
+  k_t^o &= \mathcal{H}_n(r K_t^v, t) + k_t^s
+\end{align*} 
+
+Altera-se a notação para saídas recebidas por um endereço de grupo $(K^{v,grp}_t,K^{s,grp}_t)$:
+%We can update our notation for outputs received by a group address $(K^{v,grp}_t,K^{s,grp}_t)$:\vspace{.175cm}
+\begin{align*}
+  K^{o,grp}_t &= \mathcal{H}_n(r K^{v,grp}_t, t)G + K^{s,grp}_t  \\ 
+  k^{o,grp}_t &= \mathcal{H}_n(r K^{v,grp}_t, t) + k^{s,grp}_t
+\end{align*}
+
+Qualquer pessoa que tenha $k^{v,grp}_t$ e $K^{s,grp}_t$ pode descobrir $K^{o,grp}_t$, e pode descodificar o termo de Diffie-Hellman para o montante de saída e reconstruir o compromisso de máscara correspondente (secção \ref{sec:pedersen_monero}).
+
+%Just as before, anyone with $k^{v,grp}_t$ and $K^{s,grp}_t$ can discover $K^{o,grp}_t$ is their address's owned output, and can decode the Diffie-Hellman term for output amount and reconstruct the corresponding commitment mask (Section \ref{sec:pedersen_monero}). 
+
+Isto também significa que sub-endereços de multi-assinatura são possíveis (secção \ref{sec:subaddresses}). Transacções de multi-assinatura que utilizem fundos provenientes de um sub-endereço requerem algumas modificações aos seguintes algoritmos. Sub-endereços de multi-assinatura são suportados em Monero.
+%This also means multisig subaddresses are possible (Section \ref{sec:subaddresses}). Multisig transactions using funds received to a subaddress require some fairly straightforward modifications to the following algorithms, which we mention in footnotes.\footnote{Multisig subaddresses are supported in Monero.}
+
+
+\subsection{{\tt RCTTypeBulletproof2} com multi-assinaturas N-de-N }
+\label{sec:rcttypebulletproof2-multisig}
+
+A maior parte de uma transacção de multi-assinatura pode ser completada por quem a iniciou. Só as assinaturas de MLSTAG requerem colaboração. Um iniciador deve fazer estes passos para preparar uma transacção {\tt RCTTypeBulletproof2} (lembrar secção \ref{sec:RCTTypeBulletproof2}):  
+%Most parts of a multisig transaction can be completed by whoever initiated it. Only the MLSTAG signatures require collaboration. An initiator should do these things to prepare for an {\tt RCTTypeBulletproof2} transaction (recall Section \ref{sec:RCTTypeBulletproof2}):
+\begin{enumerate}
+    \item Gera-se uma chave privada de transacção $r \in_R \mathbb{Z}_l$ (secção \ref{sec:one-time-addresses}) e calcula-se a correspondente chave pública $r G$ (ou múltiplas chaves destas se o destinatário for um sub-endereço; secção \ref{sec:subaddresses}).
+%Generate a transaction private key $r \in_R \mathbb{Z}_l$ (Section \ref{sec:one-time-addresses}) and compute the corresponding public key $r G$ (or multiple such keys if dealing with a subaddress recipient; Section \ref{sec:subaddresses}).
+    \item Escolhem-se as entradas a serem gastas ($j \in \{1,...,m\}$ saídas possuídas com endereços ocultos $K^{o,grp}_j$ e montantes $a_1,...,a_m$), e os destinatários que recebem os fundos ($t \in \{0,...,p-1\}$ novas saídas com montantes $b_0,...,b_{p-1}$ e endereços ocultos $K^{o}_t$). Isto incluí a taxa do mineiro $f$ e o seu compromisso $f H$. Escolhe-se também o conjunto de membros desvio do anel.
+ %Decide the inputs to be spent ($j \in \{1,...,m\}$ owned outputs with one-time addresses $K^{o,grp}_j$ and amounts $a_1,...,a_m$), and recipients to receive funds ($t \in \{0,...,p-1\}$ new outputs with amounts $b_0,...,b_{p-1}$ and one-time addresses $K^{o}_t$). This includes the miner's fee $f$ and its commitment $f H$. Decide each input's set of decoy ring members.
+    \item Codifica-se cada montante de saída $\mathit{montante}_t$ (secção \ref{sec:pedersen_monero}), e calcula-se os compromissos de saída $C^b_t$. 
+%Encode each output's amount $\mathit{amount}_t$ (Section \ref{sec:pedersen_monero}), and compute the output commitments $C^b_t$.
+    \item Selecciona-se para cada entrada $j \in \{1,...,m-1\}$, componentes máscara de pseudo compromissos de saída :
+\begin{align*}
+x'_{j} \in_R \mathbb{Z}_l .
+\end{align*}
+Calcula-se a {\em m-ésima} máscara como na secção \ref{sec:ringct-introduction} :
+%Select, for each input $j \in \{1,...,m-1\}$, pseudo output commitment mask components $x'_{j} \in_R \mathbb{Z}_l$, and compute the $m$\nth mask as (Section \ref{sec:ringct-introduction})
+\begin{align*}
+x'_m = \sum_t y_t - \sum_{j=1}^{m-1} x'_j
+\end{align*}
+Calcule o compromisso da pseudo saída $C'^a_{j}$.
+%Compute the pseudo output commitments $C'^a_{j}$.
+    \item É feita a prova de domínio agregada tipo {\em Bulletproof} para todas as saídas. Lembrar secção \ref{sec:range_proofs}. 
+%Produce the aggregate Bulletproof range proof for all outputs. Recall Section \ref{sec:range_proofs}.
+    \item Preparação para as assinaturas MLSTAG, ao gerar para os compromissos a zero, componentes semente :
+\begin{align*}    
+\alpha^z_{j} \in_R \mathbb{Z}_l ,
+\end{align*}
+e calcular $\alpha^z_{j} G$. Não há necessidade de comprometer e revelar desde que estes compromissos a zero são conhecidos por todos os signatários.
+%Prepare for MLSTAG signatures by generating, for the commitments to zero, seed components $\alpha^z_{j} \in_R \mathbb{Z}_l$, and computing $\alpha^z_{j} G$.
+%\footnote{There is no need to commit-and-reveal these since the commitments to zero are known by all signers.}
+\end{enumerate}
+
+Depois o iniciador envia toda esta informação aos outros participantes de forma segura. Agora o grupo de signatários está pronto a construír assinaturas nas entradas com as suas chaves privadas $k^{s,agg}_e$, e os compromissos a zero :
+\begin{align*}
+C^a_{\pi,j} - C'^a_{\pi,j} = z_j G
+\end{align*}
+
+%He sends all this information to the other participants securely. Now the group of signers is ready to build input signatures with their private keys $k^{s,agg}_e$, and the commitments to zero $C^a_{\pi,j} - C'^a_{\pi,j} = z_j G$.
+
+\subsubsection*{MLSTAG RingCT}
+
+Primeiro são construidas as imagens de chave de grupo para todas as entradas $j \in \{1,...,m\}$ com endereços ocultos $K^{o,grp}_{\pi,j}$ \footnote{Se $K^{o,grp}_{\pi,j}$ é construido de um sub-endereço de multi-assinatura indexado por $i$, então (secção \ref{sec:subaddresses}) a chave privada é a composta : 
+\[k^{o,grp}_{\pi,j} = \mathcal{H}_n(k^{v,grp} r_{u_j} K^{s,grp,i}, u_j) + \sum_e k^{s,agg}_e + \mathcal{H}_n(k^{v,grp},i)\]}.
+
+%First\marginnote{src/wallet/ wallet2.cpp {\tt sign\_multi- sig\_tx()}} they construct the group key images for all inputs $j \in \{1,...,m\}$ with one-time addresses $K^{o,grp}_{\pi,j}$.
+%If $K^{o,grp}_{\pi,j}$ is built from an $i$-indexed multisig subaddress, then (from Section \ref{sec:subaddresses}) its private key is a composite:
+%\[k^{o,grp}_{\pi,j} = \mathcal{H}_n(k^{v,grp} r_{u_j} K^{s,grp,i}, u_j) + \sum_e k^{s,agg}_e + \mathcal{H}_n(k^{v,grp},i)\]}
+\begin{enumerate}
+    \item Para cada entrada $j$ cada participante $e$ faz o seguinte :
+%For each input $j$ each participant $e$ does the following:
+    \begin{enumerate}
+        \item calcula a imagem de chave parcial : 
+\begin{align*}
+\tilde{K}^{o}_{j,e} = k^{s,agg}_e \mathcal{H}_p(K^{o,grp}_{\pi,j}) ,
+\end{align*}
+    \item e envia $\tilde{K}^{o}_{j,e}$, aos outros participantes de forma segura.
+    \end{enumerate}
+    \item Cada participante, usa $u_j$ como o index de saída na transacção em que $K^{o,grp}_{\pi,j}$ foi enviado ao endereço de multi-assinatura, e calcula :   
+%Each participant can now compute, using $u_j$ as the output index in the transaction where $K^{o,grp}_{\pi,j}$ was sent to the multisig address,
+\footnote{Se o endereço oculto corresponde a um sub-endereço de multi-assinatura indexado por $i$, adiciona-se :\marginnote{src/crypto- note\_basic/ cryptonote\_ format\_ utils.cpp {\tt generate\_key\_ image\_helper\_ precomp()}}
+\[\tilde{K}^{o,grp}_j = ... + \mathcal{H}_n(k^{v,grp},i) \mathcal{H}_p(K^{o,grp}_{\pi,j})\]}
+%If the one-time address corresponds to an $i$-indexed multisig subaddress, add\marginnote{src/crypto- note\_basic/ cryptonote\_ format\_ utils.cpp {\tt generate\_key\_ image\_helper\_ precomp()}}
+\begin{align*}
+\tilde{K}^{o,grp}_j = \mathcal{H}_n(k^{v,grp} r G, u_j) \mathcal{H}_p(K^{o,grp}_{\pi,j}) + \sum_e \tilde{K}^{o}_{j,e}
+\end{align*}
+\end{enumerate}
+
+%Then they build a MLSTAG signature for each input $j$.
+Depois é construída uma assinatura MLSTAG para cada entrada $j$. 
+\begin{enumerate}
+    \item Cada participante $e$ faz o seguinte :
+%Each participant $e$ does the following:
+    \begin{enumerate}
+        \item gera componentes semente :
+\begin{align*}
+\alpha_{j,e} \in_R \mathbb{Z}_l
+\end{align*}
+\marginnote{src/wallet/ wallet2.cpp {\tt get\_multi- sig\_kLRki()}} componentes semente $\alpha_{j,e} \in_R \mathbb{Z}_l$ e calcula $\alpha_{j,e} G$, e $\alpha_{j,e} \mathcal{H}_p(K^{o,grp}_{\pi,j})$,
+        \item gera para $i \in \{1,...,v+1\}$ excepto $i = \pi$, componentes aleatórios $r_{i,j,e}$ e $r^z_{i,j,e}$,
+        \item calcula o compromisso
+        \[C^{\alpha}_{j,e} = \mathcal{H}_n(T_{com},\alpha_{j,e} G, \alpha_{j,e} \mathcal{H}_p(K^{o,grp}_{\pi,j}),r_{1,j,e},...,r_{v+1,j,e},r^z_{1,j,e},...,r^z_{v+1,j,e})\]
+        \item e envia $C^{\alpha}_{j,e}$ aos outros participantes de forma segura.
+    \end{enumerate}
+    \item Depois de receber todos os $C^{\alpha}_{j,e}$ dos outros participantes, envie todos os $\alpha_{j,e} G$, $\alpha_{j,e} \mathcal{H}_p(K^{o,grp}_{\pi,j})$ e $r_{i,j,e}$ e $r^z_{i,j,e}$, e verifique que cada compromisso original de cada participante é válido.  
+%Upon receiving all $C^{\alpha}_{j,e}$ from the other participants, send all $\alpha_{j,e} G$, $\alpha_{j,e} \mathcal{H}_p(K^{o,grp}_{\pi,j})$, and $r_{i,j,e}$ and $r^z_{i,j,e}$, and verify each participant's original commitment was valid.
+    \item Cada participante calcula 
+    \begin{align*}
+        \alpha_{j} G &= \sum_e \alpha_{j,e} G\\
+        \alpha_{j} \mathcal{H}_p(K^{o,grp}_{\pi,j}) &= \sum_e \alpha_{j,e} \mathcal{H}_p(K^{o,grp}_{\pi,j})\\
+        r_{i,j} &= \sum_e r_{i,j,e}\\
+        r^{z}_{i,j} &= \sum_e r^z_{i,j,e}
+    \end{align*}{}
+    \item Cada participante constroí o ciclo de assinatura (veja-se a secção \ref{sec:MLSAG}).
+%Each participant can build the signature loop (see Section \ref{sec:MLSAG}).
+    \item Para fechar a assinatura, cada participante $e$ faz o seguinte:
+%To finish closing the signature, each participant $e$ does the following:
+    \begin{enumerate}
+        \item define $r_{\pi,j,e} = \alpha_{j,e} - c_{\pi} k^{s,agg}_e \pmod l$,
+        \item e envia $r_{\pi,j,e}$ aos outros participantes de forma segura.
+    \end{enumerate}
+    \item Qualquer participante\marginnote{src/ringct/ rctSigs.cpp {\tt signMulti- sig()}} pode calcular (lembre-se que $\alpha^z_{j,e}$ foi criado pelo iniciador)
+\footnote{Se \marginnote{src/crypto- note\_basic/ cryptonote\_ format\_ utils.cpp {\tt generate\_key\_ image\_helper\_ precomp()}}o endereço oculto $K^{o,grp}_{\pi,j}$ corresponde a um sub-endereço de multi-assinatura indexado por $i$, inclui-se :
+%If the one-time address $K^{o,grp}_{\pi,j}$ corresponds to an $i$-indexed multisig subaddress, include\marginnote{src/crypto- note\_basic/ cryptonote\_ format\_ utils.cpp {\tt generate\_key\_ image\_helper\_ precomp()}}
+    \[r_{\pi,j} = ... - c_{\pi}*\mathcal{H}_n(k^{v,grp},i)\]}\vspace{.175cm}
+    \[r_{\pi,j} = \sum_e r_{\pi,j,e} - c_{\pi}*\mathcal{H}_n(k^{v,grp} r G, u_j)\]
+    \[r^{z}_{\pi,j} = \alpha^z_{j,e} - c_{\pi} z_j \pmod l\]
+\end{enumerate}
+
+A assinatura para a entrada $j$ é $\sigma_j(\mathfrak{m}) = (c_1,r_{1,j},r^{z}_{1,j},...,r_{v+1,j},r^{z}_{v+1,j})$ com $\tilde{K}^{o,grp}_j$. 
+%The signature for input $j$ is $\sigma_j(\mathfrak{m}) = (c_1,r_{1,j},r^{z}_{1,j},...,r_{v+1,j},r^{z}_{v+1,j})$ with $\tilde{K}^{o,grp}_j$.
+
+Desde que em Monero a mensagem $\mathfrak{m}$ e o desafio $c_{\pi}$ dependem em todas as outras partes da transacção, cada participante que tenta enganar os seus co-signatários, ao enviar o valor errado, em qualquer ponto do processo inteiro, irá causar que a assinatura falhe. A resposta $r_{\pi,j}$ só é válida para a mensagem $\mathfrak{m}$ e para o desafio $c_{\pi}$ para o qual foi definido. 
+
+%Since in Monero the message $\mathfrak{m}$ and the challenge $c_{\pi}$ depend on all other parts of the transaction, any participant who tries to cheat by sending the wrong value, at any point in the whole process, to his fellow signers will cause the signature to fail. The response $r_{\pi,j}$ is only useful for the $\mathfrak{m}$ and $c_{\pi}$ it is defined for.
+
+
+\subsection{Comunicação simplificada}
+\label{sec:simplified-communication}
+
+Em Monero, são necessários muitos passos para construír uma transacção de multi-assinatura. É possível simplificar e reorganizar alguns deles, tal que as interações entre signatários acontecam em duas partes com um total de 5 rondas.    
+%It takes a lot of steps to build a multisignature Monero transaction. We can reorganize and simplify some of them so that signer interactions are encompassed by two parts with five total rounds.
+\begin{enumerate}
+    \item {\it Agregação de chave para um endereço público de multi-assinatura}:  
+Qualquer pessoa com um conjunto de endereços públicos pode executar {\tt premerge}, e depois {\tt merge} o que resulta num endereço N-de-N.
+%??? resulta num endereço N-de-N ?  
+Mas nenhum participante irá saber a chave de ver de grupo excepto se eles aprendam todos os componentes, portanto o grupo começa por enviar $k^{v}_e$ e $K^{s,base}_e$ uns aos outros de forma segura. 
+%Anyone with a set of public addresses can run {\tt premerge} on them and then {\tt merge} an N-of-N address, but no participant will know the group view key unless they learn all the components, so the group starts by sending $k^{v}_e$ and $K^{s,base}_e$ to each other securely
+\marginnote{src/wallet/ wallet2.cpp {\tt pack\_multi- signature\_ keys()}}. 
+Qualquer participante pode executar {\tt premerge} e {\tt merge} e publicar $(K^{v,grp},K^{s,grp})$, o que permite ao grupo receber fundos através do endereço de grupo. A agregação M-de-N requer mais passos, que nós descrevemos na secção \ref{sec:smaller-thresholds}. 
+%Any participant can {\tt premerge} and {\tt merge} and publish $(K^{v,grp},K^{s,grp})$, allowing the group to receive funds to the group address. M-of-N aggregation requires more steps, which we describe in Section \ref{sec:smaller-thresholds}.
+    \item {\it Transacções}:
+    \begin{enumerate}
+        \item Algum participante ou sub-coalição ( o iniciador )
+%Some participant or sub-coalition (the initiator)
+\marginnote{src/wallet/ wallet2.cpp {\tt transfer\_ selected\_ rct()}} 
+decide escrever uma transacção. Eles então escolhem $m$ entradas com endereços ocultos $K^{o,grp}_{j}$ e compromissos a montantes $C^a_j$, $m$ conjuntos de $v$ endereços ocultos adicionais e compromissos para serem usados como membros desvio de anel. Os participantes escolhem também $p$ destinatários com endereços públicos $(K^s_t, K^v_t)$ e montantes $b_t$ para lhes enviar, decidir uma taxa de transacção  $f$, e gerar uma chave privada de transacção $r$,         
+%decides to write a transaction. They choose $m$ inputs with one-time addresses $K^{o,grp}_{j}$ and amount commitments $C^a_j$, $m$ sets of $v$ additional one-time addresses and commitments to be used as ring decoys, pick $p$ output recipients with public addresses $(K^v_t,K^s_t)$ and amounts $b_t$ to send them, decide a transaction fee $f$, pick a transaction private key $r$,
+\footnote{Ou chaves privadas de transacção $r_{t}$ ao enviar para pelo menos um sub-endereço.}
+gerar máscaras de pseudo compromisso de saída $x'_{j}$ com $j \neq m$, construír o termo ECDH $\mathit{montante}_t$ para cada saída, produzir uma prova de domínio agregada, e gerar aberturas de assinatura $\alpha^z_j$ para todos os compromissos a zero das entradas e escalares aleatórios $r_{i,j}$ e $r^z_{i,j}$ com $i \neq \pi_j$.
+generate pseudo output commitment masks $x'_{j}$ with $j \neq m$, construct the ECDH term $\mathit{amount}_t$ for each output, produce an aggregate range proof, and generate signature openers $\alpha^z_j$ for all inputs' commitments to zero and random scalars $r_{i,j}$ and $r^z_{i,j}$ with $i \neq \pi_j$.
+\footnote{Note-se que o processo signatário é simplificado ao deixar que o iniciador gere escalares aleatórios $r_{i,j}$ e $r^z_{i,j}$, em vez de que cada co-signatário gere componentes que eventualmente sejam somados juntos.} 
+%Note that we simplify the signing process by letting the initiator generate random scalars $r_{i,j}$ and $r^z_{i,j}$, instead of each co-signer generating components that eventually get summed together.} 
+Os participantes também preparam a contribuição para a próxima ronda de comunicação.\\
+%They also prepare their contribution for the next communication round.\\
+
+O iniciador envia toda esta informação aos outros participantes de forma segura.        
+%The initiator
+\marginnote{src/wallet/ wallet2.cpp {\tt save\_multi- sig\_tx()}} 
+%sends all this information to the other participants securely.
+\footnote{Ele não precisa de enviar os montantes de saída $b_t$ directamente, pois estes podem ser calculados a partir de $\mathit{amount}_t$. Em Monero faz-se a abordagem razoável de criar uma transacção parcial, que contêm informação seleccionada pelo iniciador, isto envia-se para outros co-signatários juntamente com uma lista de informação relevante; como chaves privadas de transacção, endereços de destino, entradas verdadeiras, etc.}   
+%He doesn't need to send the output amounts $b_t$ directly, as they can be computed from $\mathit{amount}_t$. Monero takes the reasonable approach of creating a partial transaction filled with the information selected by the initiator, and sending that to other cosigners along with a list of related information like transaction private keys, destination addresses, the real inputs, etc.} 
+Os outros participantes podem sinalizar consentimento ao enviar a parte deles da próxima ronda de comunicação, ou negociar mudanças. 
+%The other participants can signal agreement by sending their part of the next communication round, or negotiate for changes.
+        \item Cada participante escolhe os seus componentes de abertura para as assinaturas MLSTAG, compromete-se ás mesmas, calcula as imagens de chave parciais, e envia esses compromissos e imagens parciais aos outros participantes de forma segura.\\
+%Each participant chooses their opening components for the MLSTAG signature(s), commits to them, calculates their partial key images, and sends those commitments and partial images to other participants securely.\\
+
+        Assinatura(s) MLSTAG : A imagem de chave $\tilde{K}^{o}_{j,e}$, a entropia de assinatura $\alpha_{j,e} G$, e $\alpha_{j,e} \mathcal{H}_p(K^{o,grp}_{\pi,j})$. Imagens de chave parciais não precisam de estar nos dados comprometidos, desde que esses dados não podem ser usados para extraír as chaves privadas dos signatários. As imagens de chave parciais também são úteis para observar quais saídas foram gastas, portanto para uma arquitectura modular estas devem ser tratadas individualmente.
+%key image $\tilde{K}^{o}_{j,e}$, signature randomness $\alpha_{j,e} G$, and $\alpha_{j,e} \mathcal{H}_p(K^{o,grp}_{\pi,j})$. Partial key images don't need to be in committed data, as they can't be used to extract signers' private keys. They are also useful for viewing which owned outputs have been spent, so for the sake of modular design should be handled separately.% In line with that modularity, since participants could provide fake partial images in order to fool other participants (e.g. non-signing ones) into thinking an owned output is unspent, it is necessary to create a proof of legitimacy for all partial key images using the method from Section \ref{dualbase proof}.
+        \item Depois de receber todos os compromissos de assinatura, cada participante envia a informação comprometida aos outros participantes de forma segura. 
+%Upon receiving all signature commitments, each participant sends the committed information to the other participants securely.
+        \item Cada participante fecha a sua parte das assinaturas MLSTAG, e envia todos os $r_{{\pi_j},j,e}$ aos outros participantes de forma segura.
+%Each participant closes their part of the MLSTAG signature(s), sending all $r_{{\pi_j},j,e}$ to the other participants securely.
+\footnote{É imperativo que cada tentativa de assinar por um certo signatário, use um $\alpha_{j,e}$ único, para evitar a fuga da chave privada a outros signatários (secção \ref{sec:schnorr-fiat-shamir}) \cite{MRL-0009-multisig}. As carteiras deviam por princípio forçar isto ao apagarem sempre $\alpha_{j,e}$, cada vez que uma resposta que use isso seja enviada para fora da carteira.}   
+%It is imperative that each signing attempt by a signer use a unique $\alpha_{j,e}$, to avoid leaking his private spend key to other signers (recall Section \ref{sec:schnorr-fiat-shamir}) \cite{MRL-0009-multisig}. Wallets should fundamentally enforce this by always deleting\marginnote{src/wallet/ wallet2.cpp {\tt save\_multi- sig\_tx()}} $\alpha_{j,e}$ whenever a response that uses it has been transmitted outside of the wallet.}
+    \end{enumerate}
+\end{enumerate}
+
+Assumindo que o processo correu bem, todos os participantes podem acabar de escrever a transacção e envia-la á rede. As transacções feitas por uma coalição de multi-assinatura são indistinguíveis de transacções normais, feitas por só um signatário.   
+%Assuming the process went well, all participants can finish writing the transaction and broadcast it on their own. Transactions authored by a multisig coalition are indistinguishable from those authored by individuals.
+
+\section{Recalcular imagens de chaves}
+\label{sec:recalculating-key-images-multisig}
+
+Se alguêm perde os seus dados e quer calcular o saldo de um dos seus endereços (montantes recebidos menos montantes gastos), então precisa de sacar dados da lista de blocos. As chaves de ver só são úteis para ler quais os montantes recebidos, assim um moneriano precisa de calcular imagens de chave para todas as saídas que possui, para ver se essas foram gastas, ao comparar com imagens de chave guardadas na lista de blocos. Desde que os membros de um endereço de grupo nao podem calcular as imagens de chave individualmente, estes requerem a ajuda do outros membros. 
+
+%If someone loses their records and wants to calculate their address's balance (received minus spent funds), they need to check the blockchain. View keys are only useful for reading received funds, so users need to calculate key images for all owned outputs to see if they have been spent, by comparing with key images stored in the blockchain. Since members of a group address can't compute key images on their own, they need to enlist the other participants' help.
+
+Calcular imagens de chave de uma simples soma de componentes pode falhar se participantes deshonestos reportam chaves falsas.
+%Calculating key images from a simple sum of components might fail if dishonest participants report false keys.
+\footnote{Actualmente em Monero, usa-se uma soma simples \marginnote{src/wallet/ wallet2.cpp {\tt export\_multi- sig()}} .}
+%Currently Monero\marginnote{src/wallet/ wallet2.cpp {\tt export\_multi- sig()}} appears to use a simple sum.} 
+%??? appears ?
+Dada uma saída recebida com o endereço oculto $K^{o,grp}$, o grupo pode produzir uma simples prova tipo Schnorr, para que a imagem de chave $\tilde{K}^{o,grp}$ é legitima sem que componentes de chaves privadas sejam revelados, nem a necessidade de confiarem uns nos outros.  
+
+%Given a received output with one-time address $K^{o,grp}$, the group can produce a simple `linkable' Schnorr-like proof (basically single-key bLSTAG, recall Sections \ref{sec:proofs-discrete-logarithm-multiple-bases} and \ref{blsag_note}) to prove the key image $\tilde{K}^{o,grp}$ is legitimate without revealing their private spend key components or needing to trust each other.
+
+
+\subsection*{Prova}
+
+\begin{enumerate}
+    \item Cada participante $e$ faz o seguinte :
+    \begin{enumerate}
+        \item calcula $\tilde{K}^{o}_{e} = k^{s,agg}_e \mathcal{H}_p(K^{o,grp})$,
+        \item gera a componente semente$\alpha_e \in_R \mathbb{Z}_l$ e calcula $\alpha_e G$ e $\alpha_e \mathcal{H}_p(K^{o,grp})$,
+        \item compromete-se aos dados com : $C^{\alpha}_{e} = \mathcal{H}_n(T_{com}, \alpha_e G, \alpha_e \mathcal{H}_p(K^{o,grp}))$,
+        \item e envia $C^{\alpha}_{e}$ e $\tilde{K}^{o}_{e}$ aos outros participantes de forma segura.
+    \end{enumerate}
+    \item Depois de receber todos os $C^{\alpha}_{e}$, cada participante envia a informação comprometida e verifica os compromissos dos outros participantes.   
+%Upon receiving all $C^{\alpha}_{e}$, each participant sends the committed information and verifies other participants' commitments were legitimate.
+    \item Cada participante pode calcular : 
+\footnote{Se o endereço oculto corresponde a um sub-endereço de multi-assinatura indexado por $i$, adicione-se : 
+    \[\tilde{K}^{o,grp} = ... + \mathcal{H}_n(k^{v,grp},i) \mathcal{H}_p(K^{o,grp})\]}
+%If the one-time address corresponds to an $i$-indexed multisig subaddress, add
+%    \[\tilde{K}^{o,grp} = ... + \mathcal{H}_n(k^{v,grp},i) \mathcal{H}_p(K^{o,grp})\]}\vspace{.175cm}
+    \[\tilde{K}^{o,grp} = \mathcal{H}_n(k^{v,grp} r G, u) \mathcal{H}_p(K^{o,grp}) + \sum_e \tilde{K}^{o}_{e}\]
+    \[\alpha G = \sum_e \alpha_{e} G\]
+    \[\alpha \mathcal{H}_p(K^{o,grp}) = \sum_e \alpha_{e} \mathcal{H}_p(K^{o,grp})\]
+    \item Cada participante calcula o desafio 
+%Each participant computes the challenge
+\footnote{Esta prova devia incluir separação de domínio e prefixo de chave, o que é omitido por brevidade.}
+%This proof should include domain separation and key prefixing, which we omit for brevity.}
+    \vspace{.175cm}
+    \[c = \mathcal{H}_n([\alpha G],[\alpha \mathcal{H}_p(K^{o,grp})])\]
+    \item Cada participante faz o seguinte : 
+%        Each participant does the following:
+    \begin{enumerate}
+        \item define-se $r_e = \alpha_e - c*k^{s,agg}_e \pmod l$,
+        \item e envia-se $r_e$ aos outros participantes de forma segura.
+    \end{enumerate}
+    \item Cada participante pode calcular :
+\footnote{Se o endereço oculto $K^{o,grp}$ corresponde a um sub-endereço de multi-assinatura indexado por $i$, inclui-se :
+\[r^{resp} = ... - c*\mathcal{H}_n(k^{v,grp},i)\]}
+%If the one-time address $K^{o,grp}$ corresponds to an $i$-indexed multisig subaddress, include
+\vspace{.175cm}
+    \[r^{resp} = \sum_e r_e - c*\mathcal{H}_n(k^{v,grp} r G, u)\]
+\end{enumerate}
+
+A prova é $(c,r^{resp})$ com $\tilde{K}^{o,grp}$.
+%The proof is $(c,r^{resp})$ with $\tilde{K}^{o,grp}$.
+\subsection*{Verificação}
+
+\begin{enumerate}
+    \item Verifica $l \tilde{K}^{o,grp} \stackrel{?}{=} 0$.
+    \item Calcula 
+
+$c' = \mathcal{H}_n([r^{resp} G + c*K^{o,grp}],[r^{resp} \mathcal{H}_p(K^{o,grp}) + c*\tilde{K}^{o,grp}])$.
+    \item Se $c = c'$ então a imagem chave $\tilde{K}^{o,grp}$ corresponde ao endereço oculto $K^{o,grp}$ (enp).
+\end{enumerate}
+
+
+    
+\section{M $<$ N}
+\label{sec:smaller-thresholds}
+
+No início deste capítulo foram discutidos servicos de garantia, que usam uma multi-assinatura 2-de-2, para separar o poder signatário entre um moneriano e uma empresa de segurança. Esse sistema não é ideal, pois se a empresa de segurança for comprometida, ou se recusa cooperar, então os montantes podem ficar bloqueados. 
+
+%At the beginning of this chapter we discussed escrow services, which used 2-of-2 multisig to split signing power between a user and a security company. That setup isn't ideal, because if the security company is compromised, or refuses to cooperate, your funds may get stuck.
+
+Isto tem solução, usa-se um endereço de multi-assinatura 2-de-3, em que há 3 participantes mas só são necessários dois signatários para efectuar uma transacção. Um serviço de garantia guarda uma chave e os outros participantes guardam as outras.\newline Os participantes podem guardar uma chave num lugar seguro, e usar a outra chave para o uso quotidiano. Se o serviço de garantia falha, o participante pode usar a chave do quotidiano e a chave segura para tirar os montantes do endereço de multi-assinatura.   
+
+%We can get around that potentiality with a 2-of-3 multisig address, which has three participants but only needs two of them to sign transactions. An escrow service provides one key and users provide two keys. Users can store one key in a secure location (like a safety deposit box), and use the other for day-to-day purchases. If the escrow service fails, a user can use the secure key and day key to withdraw funds.
+
+Multi-assinaturas com limites abaixo de N, têm vários usos.
+%Multisignatures with sub-N thresholds have a wide range of uses.
+
+
+\subsection{Agregação de chave 1-de-N}
+\label{sec:1-of-n}
+
+Seja que um grupo de pessoas querem fazer uma chave de multi-assinatura $K^{grp}$, com a qual todos podem assinar. A solução é trivial: deixa-se que cada participante saiba a chave privada $k^{grp}$. Existem 3 formas de fazer isto.
+%Suppose a group of people want to make a multisig key $K^{grp}$ they can all sign with. The solution is trivial: let everyone know the private key $k^{grp}$. There are three ways to do this.
+\begin{enumerate}
+    \item Um participante ou uma sub-coalição selecciona uma chave e envia esta a todos os outros participantes de forma segura.
+%One participant or sub-coalition selects a key and sends it to everyone else securely.
+    \item Todos os participantes calculam componentes de chaves privadas, e enviam estas de forma segura a todos os outros participantes. Em que a soma é uma chave junta. 
+%All participants compute private key components and send them securely, using the simple sum as the merged key.
+\footnote{Note-se que aqui o cancelamento de chave, não é muito relevante visto que cada participante conhece a chave privada inteira.}
+%Note that key cancellation is largely meaningless here because everyone knows the full private key.}
+    \item Os participantes extendem multi-assinaturas de M-de-N a 1-de-N. Isto pode ser útil se um adversário tem acesso ás comunicações de grupo. 
+%Participants extend M-of-N multisig to 1-of-N. This might be useful if an adversary has access to the group's communications.
+\end{enumerate}
+
+Neste caso, para Monero, cada participante saberia as chaves privadas :
+\begin{align*}
+(k^{v,grp,{1\textrm{xN}}},k^{s,grp,{1\textrm{xN}}}) .
+\end{align*}
+
+Antes desta secção todas as chaves de grupo eram N-de-N, mas agora usa-se o sobrescrito 1xN para denotar chaves relacionadas com multi-assinaturas 1-de-N.
+
+%In this case, for Monero, everyone would know the private keys $(k^{v,grp,{1\textrm{xN}}},k^{s,grp,{1\textrm{xN}}})$. Before this section all group keys were N-of-N, but now we use superscript 1xN to denote keys related to 1-of-N signing.
+
+
+\subsection{Agregação de chave (N-1)-de-N}
+\label{sec:n-1-of-n}
+
+Numa chave de grupo (N-1)-de-N, como 2-de-3 ou 4-de-5, cada conjunto de (N-1) participantes pode efectuar uma transacção. Isto é conseguido com segredos partilhados do tipo Diffie-Hellman. Seja que existem participantes $e \in \{1,...,N\}$, cada um com uma chave base pública $K^{base}_e$. 
+
+%In an (N-1)-of-N group key, such as 2-of-3 or 4-of-5, any set of (N-1) participants can sign. We achieve this with Diffie-Hellman shared secrets. Lets say there are participants $e \in \{1,...,N\}$, with base public keys $K^{base}_e$ which they are all aware of.
+
+Cada participante $e$ calcula para $w \in \{1,...,N\}$ excepto $w \neq e$ .
+\begin{align*}
+k^{sh,\textrm{(N-1)xN}}_{e,w} = \mathcal{H}_n(k^{base}_e K^{base}_w)
+\end{align*}
+%Each participant
+\marginnote{src/multi- sig/multi- sig.cpp {\tt generate\_ multisig\_ N1\_N()}} 
+%$e$ computes, for $w \in \{1,...,N\}$ but $w \neq e$\vspace{.175cm}
+%\[k^{sh,\textrm{(N-1)xN}}_{e,w} = \mathcal{H}_n(k^{base}_e K^{base}_w)\]
+Depois cada participante calcula todos os :
+\begin{align*}
+K^{sh,\textrm{(N-1)xN}}_{e,w} = k^{sh,\textrm{(N-1)xN}}_{e,w} G ,
+\end{align*}
+e envia isso aos outros participantes de forma segura. Agora utiliza-se o sobrescrito $sh$ para denotar chaves partilhadas por um sub-grupo dos participantes.
+
+%Then he computes all $K^{sh,\textrm{(N-1)xN}}_{e,w} = k^{sh,\textrm{(N-1)xN}}_{e,w} G$ and sends them to the other participants securely. We now use superscript $sh$ to denote keys shared by a sub-group of participants.
+
+Cada participante irá ter (N-1) componentes de chaves privadas partilhadas, correspondentes a cada um dos outros participantes. O que perfaz para todos os participantes, um total de N*(N-1) componentes de chaves privadas partilhadas.\newline Cada chave é partilhada por dois parceiros que executam a troca Diffie-Hellman, portanto só existem [N*(N-1)]/2 chaves únicas. Estas chaves únicas compõem o conjunto :
+\begin{align*}
+\mathbb{S}^{\textrm{(N-1)xN}} .
+\end{align*}
+
+%Each participant will have (N-1) shared private key components corresponding to each of the other participants, making N*(N-1) total keys between everyone. All keys are shared by two Diffie-Hellman partners, so there are really [N*(N-1)]/2 unique keys. Those unique keys compose the set $\mathbb{S}^{\textrm{(N-1)xN}}$.
+
+\subsubsection*{Generalizar {\tt premerge} and {\tt merge}}
+
+É aqui que renovamos a definição de {\tt premerge} da secção \ref{sec:robust-key-aggregation}. O seu argumento irá ser o conjunto $\mathbb{S}^{\textrm{MxN}}$, em que $M$ é o limite do conjunto de chaves. Quando $M = N$ :
+\begin{align*}
+\mathbb{S}^{\textrm{NxN}} = \mathbb{S}^{base} ,
+\end{align*}
+e quando $M < N$ it contains shared keys. O resultado é :
+\begin{align*}
+\mathbb{K}^{agg,\textrm{MxN}} .
+\end{align*}
+%??? it? contains shared keys ?
+%This is where we update the definition of {\tt premerge} from Section \ref{sec:robust-key-aggregation}. Its input will be the set $\mathbb{S}^{\textrm{MxN}}$, where $M$ is the `threshold' that the set's keys are prepared for. When $M = N$, $\mathbb{S}^{\textrm{NxN}} = \mathbb{S}^{base}$, and when $M < N$ it contains shared keys. The output is $\mathbb{K}^{agg,\textrm{MxN}}$.
+
+Os [N*(N-1)]/2 componentes de chave em $\mathbb{K}^{agg,\textrm{(N-1)xN}}$ podem ser enviados para {\tt merge}, resultando em $K^{grp,\textrm{(N-1)xN}}$ . Todos os componentes de chave privada podem ser construídos com só (N-1) participantes, desde que cada participante partilha um segredo partilhado tipo Diffie-Hellman com o n-ésimo participante.
+%The [N*(N-1)]/2 key components in $\mathbb{K}^{agg,\textrm{(N-1)xN}}$ can be sent into {\tt merge}, outputting $K^{grp,\textrm{(N-1)xN}}$. Importantly, all [N*(N-1)]/2 private key components can be assembled with just (N-1) participants since each participant shares one Diffie-Hellman secret with the N\nth guy.
+
+\subsubsection*{Um exemplo 2-de-3}
+
+Seja que existem 3 pessoas com chaves públicas $\{K^{base}_1,K^{base}_2,K^{base}_3\}$, para as quais cada uma sabe uma chave privada, e estas querem fazer uma chave de multi-assinatura 2-de-3. Depois da troca tipo Diffie-Hellman, e de enviarem uns aos outros as chaves públicas, cada um dos participantes sabe o seguinte :    
+%Say there are three people with public keys $\{K^{base}_1,K^{base}_2,K^{base}_3\}$, to which they each know a private key, who want to make a 2-of-3 multisig key. After Diffie-Hellman and sending each other the public keys they each know the following:
+\begin{enumerate}
+    \item Participante 1: $k^{sh,\textrm{2x3}}_{1,2}$, $k^{sh,\textrm{2x3}}_{1,3}$, $K^{sh,\textrm{2x3}}_{2,3}$
+    \item Participante 2: $k^{sh,\textrm{2x3}}_{2,1}$, $k^{sh,\textrm{2x3}}_{2,3}$, $K^{sh,\textrm{2x3}}_{1,3}$
+    \item Participante 3: $k^{sh,\textrm{2x3}}_{3,1}$, $k^{sh,\textrm{2x3}}_{3,2}$, $K^{sh,\textrm{2x3}}_{1,2}$
+\end{enumerate}
+
+Em que $k^{sh,\textrm{2x3}}_{1,2} = k^{sh,\textrm{2x3}}_{2,1}$, e assim por diante. O conjunto $\mathbb{S}^{\textrm{2x3}} = \{ K^{sh,\textrm{2x3}}_{1,2}, K^{sh,\textrm{2x3}}_{1,3}, K^{sh,\textrm{2x3}}_{2,3}\}$.
+
+Executar {\tt premerge} e {\tt merge} gera a chave de grupo :
+%Performing {\tt premerge} and {\tt merge} creates the group key:
+\footnote{Desde que a chave junta é composta de segredos partilhados, um observador que saiba só as chaves base originais não seria capaz de as agregar (secção \ref{subsec:drawbacks-naive-aggregation-cancellation}), e de identificar os membros da chave junta.} 
+%Since the merged key is composed of shared secrets, an observer who just knows the original base public keys would not be able to aggregate them (Section \ref{subsec:drawbacks-naive-aggregation-cancellation}) and identify members of the merged key.}
+\vspace{.175cm}
+\begin{align*}
+    K^{grp,\textrm{2x3}} = &\mathcal{H}_n(T_{agg},\mathbb{S}^{\textrm{2x3}},K^{sh,\textrm{2x3}}_{1,2}) K^{sh,\textrm{2x3}}_{1,2} + \\
+                           &\mathcal{H}_n(T_{agg},\mathbb{S}^{\textrm{2x3}},K^{sh,\textrm{2x3}}_{1,3}) K^{sh,\textrm{2x3}}_{1,3} + \\
+                           &\mathcal{H}_n(T_{agg},\mathbb{S}^{\textrm{2x3}},K^{sh,\textrm{2x3}}_{2,3}) K^{sh,\textrm{2x3}}_{2,3}
+\end{align*}
+
+Seja que o participante 1 e 2 querem assinar a mensagem $\mathfrak{m}$. Iremos usar uma assinatura básica tipo Schnorr para demonstrar. 
+%Now let's say persons 1 and 2 want to sign a message $\mathfrak{m}$. We will use a basic Schnorr-like signature to demonstrate.
+\begin{enumerate}
+    \item Cada participante $e \in \{1,2\}$ faz o seguinte :
+%Each participant $e \in \{1,2\}$ does the following:
+    \begin{enumerate}
+        \item escolhe um componente aleatório $\alpha_e \in_R \mathbb{Z}_l$,
+        \item calcula $\alpha_e G$,
+        \item compromete-se com $C^{\alpha}_{e} = \mathcal{H}_n(T_{com},\alpha_e G)$,
+        \item e envia $C^{\alpha}_{e}$ aos outros participantes de forma segura.
+    \end{enumerate}
+    \item Depois de receber $C^{\alpha}_{e}$, cada participante envia $\alpha_e G$ e verifica os outros compromissos.
+%??? envia $\alpha_e G$ a quem ?
+%On receipt of all $C^{\alpha}_{e}$, each participant sends out $\alpha_e G$ and verifies the other commitments were legitimate.
+    \item cada participante calcula 
+    \[\alpha G = \sum_e \alpha_e G\]
+    \[c = \mathcal{H}_n(\mathfrak{m},[\alpha G])\]
+    \item Participante 1 faz o seguinte :
+    \begin{enumerate}
+        \item calcula $r_1 = \alpha_1 - c*[k^{agg,\textrm{2x3}}_{1,3} + k^{agg,\textrm{2x3}}_{1,2}]$,
+        \item e envia $r_1$ ao participante 2 de forma segura.
+    \end{enumerate}
+    \item Participante 2 faz o seguinte :
+    \begin{enumerate}
+        \item calcula $r_2 = \alpha_2 - c*k^{agg,\textrm{2x3}}_{2,3}$,
+        \item e envia $r_2$ ao participante 1 de forma segura.
+    \end{enumerate}
+    \item Cada participante calcula
+    \[r = \sum_e r_e\]
+    \item Cada participante pode publicar a assinatura $\sigma(\mathfrak{m}) = (c,r)$.
+\end{enumerate}
+
+A única mudança com multi-assinaturas de limite sub-N, é como `fechar o círculo' ao definir $r_{\pi,e}$ ( no caso de assinaturas em anel, com index secreto $\pi$). 
+%The only change with sub-N threshold signatures is how to `close the loop' by defining $r_{\pi,e}$ (in the case of ring signatures, with secret index $\pi$). 
+Cada participante tem de incluir o segredo partilhado correspondente á `pessoa desaparecida', mas desde que todos os outros segredos partilhados são duplicados, existe um truque.\newline Dado o conjunto $\mathbb{S}^{base}$ de chaves originais de todos os participantes, só a {\em primeira pessoa} - ordenada por index em $\mathbb{S}^{base}$ - com uma cópia de um segredo partilhado uses it to calculate his $r_{\pi,e}$ .        
+%??? uses it ? uses what ?
+%Each participant must include their shared secret corresponding to the `missing person', but since all the other shared secrets are doubled up there is a trick. Given the set $\mathbb{S}^{base}$ of all participants' original keys, only the {\em first person} - ordered by index in $\mathbb{S}^{base}$ - with the copy of a shared secret uses it to calculate his $r_{\pi,e}$.
+\footnote{Na prática isto significa que um iniciador devia determinar qual o sub-conjunto de M signatários irá assinar uma dada mensagem. Se ele descobre que nenhum signatário quer assinar, ou seja (O $\geq$ M), ele pode orchestrar múltiplas tentativas simultâneas de assinar para cada sub-conjunto de tamanho M dentro de O para aumentar a probabilidade que uma funcione. Parece que Monero utiliza esta abordagem. Também acontece que (um ponto esotérico) a lista {\em original} de saídas destino, criadas pelo iniciador são misturadas de forma aleatória, e essa lista é então usada por cada tentativa de assinar, e todos os outros co-signatários (isto está relacionado com o {\tt flag} obscuro {\tt shuffle\_outs}).}    
+%In\marginnote{src/wallet/ wallet2.cpp {\tt transfer\_ selected\_ rct()}} practice this means an initiator should determine which subset of M signers will sign a given message. If he discovers O signers are willing to sign, with (O $\geq$ M), he can orchestrate multiple concurrent signing attempts for each M-size subset within O to increase the chances of one succeeding. It appears Monero uses this approach. It also turns out (an esoteric point) that the {\em original} list of output destinations created by the initiator is randomly shuffled, and that random list is then used by all concurrent signing attempts, and all other co-signers (this is related to the obscure flag {\tt shuffle\_outs}).}
+\footnote{Actualmente Monero usa um método signatário de {\em round-robin} \marginnote{src/wallet/ wallet2.cpp {\tt sign\_multi- sig\_tx()}}, em que o iniciador assina com todas as suas chaves privadas, esta transacção parcialmente assinada é então enviada a outro signatário que assina com todas as {\em suas} chaves privadas (que ainda não foram utilizadas para assinar), que por sua vez envia esta transacção parcialmente assinada ao próximo signatário, e por assim diante, até ao signatário final. Este então pode enviar a transacção agora totalmente assinada á rede, ou a outro signatário para que este a envie á rede.} 
+%Currently Monero appears to use a round-robin signing method\marginnote{src/wallet/ wallet2.cpp {\tt sign\_multi- sig\_tx()}}, where the initiator signs with all his private keys, passes the partially signed transaction to another signer who signs with all {\em his} private keys (that have not been used to sign with yet), who passes to yet another signer, and so on, until the final signer who can either publish the transaction or send it to other signers so they can publish it.}
+
+No exemplo prévio, o participante 1 calcula\vspace{.175cm}
+%In the previous example, participant 1 computes\vspace{.175cm}
+\[r_1 = \alpha_1 - c*[k^{agg,\textrm{2x3}}_{1,3} + k^{agg,\textrm{2x3}}_{1,2}]\] 
+
+%while participant 2 only computes
+enquanto o participante 2 só calcula :
+\[r_2 = \alpha_2 - c*k^{agg,\textrm{2x3}}_{2,3}\]
+
+Em Monero o mesmo princípio aplica-se a calcular a imagem de chave de grupo em transacções de multi-assinatura com limites sub-N.
+
+%The same principle applies to computing the group key image in sub-N threshold Monero multisig transactions.
+
+
+\subsection{Agregação de chave M-de-N}
+\label{sec:m-of-n}
+
+Em (N-1)-de-N cada segredo partilhado entre duas chaves públicas, tal como $K^{base}_1$ e $K^{base}_2$ contêm duas chaves privadas $k^{base}_1 k^{base}_2 G$.\newline
+É um segredo porque só o participante 1 pode calcular $k^{base}_1 K^{base}_2$, e só o participante 2 pode calcular $k^{base}_2 K^{base}_1$.  
+%We can understand M-of-N by adjusting our perspective on (N-1)-of-N. In (N-1)-of-N every shared secret between two public keys, such as $K^{base}_1$ and $K^{base}_2$, contains two private keys, $k^{base}_1 k^{base}_2 G$. It's a secret because only person 1 can compute $k^{base}_1 K^{base}_2$, and only person 2 can compute $k^{base}_2 K^{base}_1$.
+E se existe uma terceira pessoa com $K^{base}_3$, existem segredos partilhados 
+\begin{align*}
+k^{base}_1 k^{base}_2 G, k^{base}_1 k^{base}_3 G, k^{base}_2 k^{base}_3 G .
+\end{align*}
+
+E se os participantes enviam essas chaves públicas uns aos outros? Cada um contribui uma chave privada a duas chaves públicas. Agora diga-se que os participantes fazem um novo segredo partilhado com essa terceira chave pública.  
+
+%What if there is a third person with $K^{base}_3$, there exist shared secrets $k^{base}_1 k^{base}_2 G$, $k^{base}_1 k^{base}_3 G$, and $k^{base}_2 k^{base}_3 G$, and the participants send those public keys to each other (making them no longer secret)? They each contributed a private key to two of the public keys. Now say they make a new shared secret with that third public key.
+
+O participante 1\marginnote{src/multi- sig/multi- sig.cpp {\tt generate\_ multisig\_ deriv- ations()}} calcula o segredo partilhado : 
+\begin{align*}
+k^{base}_1*(k^{base}_2 k^{base}_3 G) .
+\end{align*}
+O participante 2 calcula o segredo partilhado : 
+\begin{align*}
+k^{base}_2*(k^{base}_1 k^{base}_3 G) .
+\end{align*}
+O participante 3 calcula o segredo partilhado : 
+\begin{align*}
+k^{base}_3*(k^{base}_1 k^{base}_2 G) .
+\end{align*}
+Agora cada um dos participantes sabe :
+\begin{align*}
+k^{base}_1 k^{base}_2 k^{base}_3 G .
+\end{align*}
+O que é um segredo partilhado entre os 3 participantes (desde que nenhum deles publique o segredo).
+
+%Person 1\marginnote{src/multi- sig/multi- sig.cpp {\tt generate\_ multisig\_ deriv- ations()}} computes shared secret $k^{base}_1*(k^{base}_2 k^{base}_3 G)$, person 2 computes $k^{base}_2*(k^{base}_1 k^{base}_3 G)$, and person 3 computes $k^{base}_3*(k^{base}_1 k^{base}_2 G)$. Now they all know $k^{base}_1 k^{base}_2 k^{base}_3 G$, making a three-way shared secret (so long as no one publishes it).
+
+Este grupo podia usar : 
+\begin{align*}
+k^{sh,\textrm{1x3}} = \mathcal{H}_n(k^{base}_1 k^{base}_2 k^{base}_3 G) ,
+\end{align*}
+como uma chave privada partilhada. Publica-se :
+\begin{align*}
+K^{grp,\textrm{1x3}} = \mathcal{H}_n(T_{agg},\mathbb{S}^{\textrm{1x3}},K^{sh,\textrm{1x3}}) K^{sh,\textrm{1x3}} ,
+\end{align*}
+como um endereço de multi-assinatura 1-de-3.
+
+%The group could use $k^{sh,\textrm{1x3}} = \mathcal{H}_n(k^{base}_1 k^{base}_2 k^{base}_3 G)$ as a shared private key, and publish\vspace{.155cm} \[K^{grp,\textrm{1x3}} = \mathcal{H}_n(T_{agg},\mathbb{S}^{\textrm{1x3}},K^{sh,\textrm{1x3}}) K^{sh,\textrm{1x3}}\] as a 1-of-3 multisig address.
+
+Numa multi-assinatura 3-de-3 cada participante tem um segredo.\newline Numa multi-assinatura 2-de-3 cada sub-conjunto de 2 participantes partilha um segredo. 
+%In a 3-of-3 multisig every 1 person has a secret, in a 2-of-3 multisig every group of 2 people has a shared secret, and in 1-of-3 every group of 3 people has a shared secret. 
+%??? and in 1-of-3 every group of 3 people has a shared secret. ??? 
+
+Para generalizar para M-de-N : cada possivel sub-conjunto de (N-M+1) participantes, partilha um segredo \cite{old-multisig-mrl-note}. Se (N-M) pessoas 
+ 
+%Now we can generalize to M-of-N: every possible group of (N-M+1) people has a shared secret \cite{old-multisig-mrl-note}. If (N-M) people are missing, all their shared secrets are owned by at least one of the M remaining people, who can collaborate to sign with the group's key.
+%??? o que?
+
+
+\subsubsection*{algoritmo M-de-N}
+
+Sejam participantes $e \in \{1,...,N\}$ com chaves privadas iniciais $k^{base}_1,...,k^{base}_N$, que querem produzir uma chave M-de-N junta (M $\leq$ N; M $\geq$ 1 and N $\geq$ 2). Utiliza-se então um algoritmo interactivo.\marginnote{src/wallet/ wallet2.cpp {\tt exchange\_ multisig\_ keys()}}
+%Given participants $e \in \{1,...,N\}$ with initial private keys $k^{base}_1,...,k^{base}_N$ who wish to produce an M-of-N merged key (M $\leq$ N; M $\geq$ 1 and N $\geq$ 2), we can use an\marginnote{src/wallet/ wallet2.cpp {\tt exchange\_ multisig\_ keys()}} interactive algorithm. 
+
+Utiliza-se $\mathbb{S}_s$ para denotar todas as chaves públicas {\em únicas} na iteração $s \in \{0,...,(N-M)\}$.\newline O conjunto final $\mathbb{S}_{N-M}$ está ordenado convencionalmente com números ascendentes ou lexicográficamente). Esta notação é uma conveniência, e $\mathbb{S}_s$ é o mesmo que $\mathbb{S}^{\textrm{(N-s)xN}}$ das secções anteriores.
+
+%We will use $\mathbb{S}_s$ to denote all the {\em unique} public keys at stage $s \in \{0,...,(N-M)\}$. The final set $\mathbb{S}_{N-M}$ is ordered according to a sorting convention (such as smallest to largest numerically, i.e. lexicographically). This notation is a convenience, and $\mathbb{S}_s$ is the same as $\mathbb{S}^{\textrm{(N-s)xN}}$ from the previous sections.
+
+O conjunto de chaves públicas que cada participante gera na iteração $s$ do algoritmo
+é denotado por :
+\begin{align*}
+\mathbb{S}^K_{s,e} .
+\end{align*}
+No início :
+\begin{align*}
+\mathbb{S}^K_{0,e} = \{K^{base}_e\} .
+\end{align*}
+O conjunto :
+\begin{align*}
+\mathbb{S}^{k}_{e} .
+\end{align*}
+Irá no fim, conter as chaves privadas de agregação de cada participante. 
+%We will use $\mathbb{S}^K_{s,e}$ to denote the set of public keys each participant created at stage $s$ of the algorithm. In the beginning $\mathbb{S}^K_{0,e} = \{K^{base}_e\}$.
+%The set $\mathbb{S}^{k}_{e}$ will contain each participant's aggregation private keys at the end.
+\begin{enumerate}
+    \item Cada participante $e$ envia o conjunto original de chaves públicas :
+\begin{align*}
+\mathbb{S}^K_{0,e} = \{K^{base}_e\} ,
+\end{align*}
+aos outros participantes de forma segura.
+%Each participant $e$ sends their original public key set $\mathbb{S}^K_{0,e} = \{K^{base}_e\}$ to the other participants securely.
+
+    \item cada participante constroí $\mathbb{S}_{0}$ ao coleccionar todos os $\mathbb{S}^K_{0,e}$ e remover duplicados.
+%Each participant builds $\mathbb{S}_{0}$ by collecting all $\mathbb{S}^K_{0,e}$ and removing duplicates.
+    \item Na iteração $s \in \{1,...,(N-M)\}$ (excepto M = N)
+%For stage $s \in \{1,...,(N-M)\}$ (skip if M = N)
+    \begin{enumerate}
+        \item Cada participante $e$ faz o seguinte :
+%Each participant $e$ does the following:
+        \begin{enumerate}
+            \item Para cada elemento $g_{s-1}$ de \newline $\mathbb{S}_{s-1} \notin \mathbb{S}^K_{s-1,e}$ ,\newline calcula-se um novo segredo partilhado :
+\begin{align*}
+k^{base}_e*\mathbb{S}_{s-1}[g_{s-1}]
+\end{align*}
+%For each element $g_{s-1}$ of $\mathbb{S}_{s-1} \notin \mathbb{S}^K_{s-1,e}$, compute a new shared secret \[k^{base}_e*\mathbb{S}_{s-1}[g_{s-1}]\]
+            \item Todos os novos segredos partilhados são postos em : 
+\begin{align*}
+\mathbb{S}^K_{s,e} .
+\end{align*}
+%Put all new shared secrets in $\mathbb{S}^K_{s,e}$.
+            \item Se $s = (N-M)$ ,\newline calcula-se a chave privada partilhada para cada elemento :
+\begin{align*}
+x em \mathbb{S}^K_{N-M,e} .
+\mathbb{S}^{k}_{e}[x] = \mathcal{H}_n(\mathbb{S}^K_{N-M,e}[x])
+\end{align*}
+%If $s = (N-M)$, compute the shared private key for each element $x$ in $\mathbb{S}^K_{N-M,e}$
+%            \[\mathbb{S}^{k}_{e}[x] = \mathcal{H}_n(\mathbb{S}^K_{N-M,e}[x])\]
+e sobre escrever a chave pública ao pôr :
+\begin{align*}
+\mathbb{S}^K_{N-M,e}[x] = \mathbb{S}^{k}_{e}[x]*G .
+\end{align*}
+%           and overwrite the public key by setting $\mathbb{S}^K_{N-M,e}[x] = \mathbb{S}^{k}_{e}[x]*G$.
+            \item Envia-se aos outros participantes :
+\begin{align*}
+\mathbb{S}^K_{s,e} .
+\end{align*}
+        \end{enumerate}
+        \item Cada participante constroi $\mathbb{S}_{s}$ ao coleccionar todos os $\mathbb{S}^K_{s,e}$, removendo duplicados. 
+%Each participant builds $\mathbb{S}_{s}$ by collecting all $\mathbb{S}^K_{s,e}$ and removing duplicates.
+\footnote{Os participantes deviam saber quais participantes têm quais chaves no último passo ($s = N-M$), para facilitar as assinaturas colaborativas, em que só a primeira pessoa em $\mathbb{S}_0$ com uma certa chave privada é que assina. Veja-se secção \ref{sec:n-1-of-n}.}
+%Participants should keep track of who has which keys at the last stage ($s = N-M$), to facilitate collaborative signing, where only the first person in $\mathbb{S}_0$ with a certain private key uses it to sign. See Section \ref{sec:n-1-of-n}.}
+    \end{enumerate}
+    \item Cada participante ordena $\mathbb{S}_{N-M}$ segundo a convenção.
+%Each participant sorts $\mathbb{S}_{N-M}$ according to the convention.
+    \item a função {\tt premerge} tem como argumento $\mathbb{S}_{(N-M)}$, e cada chave de agregação é para $g \in \{1,...,(\textrm{size of }\mathbb{S}_{N-M})\}$ :\vspace{.1cm} 
+\begin{align*}
+\mathbb{K}^{agg,\textrm{MxN}}[g] = \mathcal{H}_n(T_{agg},\mathbb{S}_{(N-M)},\mathbb{S}_{(N-M)}[g])*\mathbb{S}_{(N-M)}[g]
+\end{align*}
+%The {\tt premerge} function takes $\mathbb{S}_{(N-M)}$ as input, and each aggregation key is, for \(g \in \{1,...,(\textrm{size of }\mathbb{S}_{N-M})\}\),\vspace{.175cm}
+%    \[\mathbb{K}^{agg,\textrm{MxN}}[g] = \mathcal{H}_n(T_{agg},\mathbb{S}_{(N-M)},\mathbb{S}_{(N-M)}[g])*\mathbb{S}_{(N-M)}[g]\]
+    \item A função {\tt merge} tem como argumento $\mathbb{K}^{agg,\textrm{MxN}}$, e a chave de grupo é :\vspace{.175cm} 
+%The {\tt merge} function takes $\mathbb{K}^{agg,\textrm{MxN}}$ as input, and the group key is\vspace{.175cm}
+    \[K^{grp,\textrm{MxN}} = \sum^{\textrm{size of }\mathbb{S}_{N-M}}_{g = 1} \mathbb{K}^{agg,\textrm{MxN}}[g]\]
+    \item Cada participante $e$ substitui cada elemento $x$ em $\mathbb{S}^k_{e}$ com a sua chave privada de agregação : \vspace{.175cm}
+    \[ \mathbb{S}^k_{e}[x] = \mathcal{H}_n(T_{agg},\mathbb{S}_{(N-M)},\mathbb{S}^k_{e}[x] G)*\mathbb{S}^k_{e}[x] \]
+\end{enumerate}
+
+%Note-se : If users want to have unequal signing power in a multisig, like 2 shares in a 3-of-4, they should use multiple starting key components instead of reusing the same one.
+
+%??? o queeee?
+
+\section{Famílias de chaves}
+\label{sec:general-key-families}
+
+Até aqui foram consideradas agregações de chave entre um simples grupo de signatários. Por exemplo, a alice o bob e a carol cada um contribui componentes de chave a um endereço de multi-assinatura 2-de-3.
+%Up to this point we have considered key aggregation between a simple group of signers. For example, Alice, Bob, and Carol each contributing key components to a 2-of-3 multisig address. 
+
+Agora imagine-se que a alice quer assinar {\em todas} as transacções desse endereço, e não quer que o bob e a carol assinem sem ela. Por outras palavras, (alice + bob) ou (alice + carol) são pares aceitáveis, mas não (bob + carol). 
+%Now imagine Alice wants to sign all transactions from that address, but doesn't want Bob and Carol to sign without her. In other words, (Alice + Bob) or (Alice + Carol) are acceptable, but not (Bob + Carol). 
+
+Isto pode ser conseguido com duas camadas de agregação de chave. Primeiro uma agregação
+ de multi-assinatura 1-de-2 $\mathbb{K}^{agg,{1\textrm{x}2}}_{BC}$ entre o bob e a carol. Depois uma chave de grupo 2-de-2 $K^{grp,{2\textrm{x}2}}$ entre a alice e $\mathbb{K}^{agg,{1\textrm{x}2}}_{BC}$. Básicamente um endereço de multi-assinatura (2-de-([1-de-1] e [1-de-2])). 
+
+%We can achieve that scenario with two layers of key aggregation. First a 1-of-2 multisig aggregation $\mathbb{K}^{agg,{1\textrm{x}2}}_{BC}$ between Bob and Carol, then a 2-of-2 group key $K^{grp,{2\textrm{x}2}}$ between Alice and $\mathbb{K}^{agg,{1\textrm{x}2}}_{BC}$. Basically, a (2-of-([1-of-1] and [1-of-2])) multisig address.
+
+Isto implica que estruturas de acesso a direitos signatários podem ficar inacabados.    
+
+%This implies access structures to signing rights can be fairly open-ended.
+
+\subsection{Árvores de família}
+
+O endereço de multi-assinatura (2-de-([1-de-1] e [1-de-2])) pode ser representado no seguinte diagrama :
+%We can diagram the (2-of-([1-of-1] and [1-of-2])) multisig address like this:
+\begin{center}
+    \begin{forest}
+        forked edges,
+        for tree = {edge = {<-, > = triangle 60}
+                    ,fork sep = 4.5 mm,
+                    ,l sep = 8 mm
+                    ,circle, draw
+                    },
+        where n children=0{tier=terminus}{},
+        [$K^{grp,{2\textrm{x}2}}$
+            [$K^{base}_A$]
+            [$\mathbb{K}^{agg,{1\textrm{x}2}}_{BC}$
+                [$K^{base}_B$]
+                [$K^{base}_C$]
+            ]
+        ]
+    \end{forest}    
+\end{center}
+
+As chaves $K^{base}_A,K^{base}_B,K^{base}_C$ são consideradas {\em raízes ancestrais}, enquanto que $\mathbb{K}^{agg,{1\textrm{x}2}}_{BC}$ é {\em filho} dos {\em pais} $K^{base}_B$ e $K^{base}_C$. Pais podem ter mais de um filho, mas para a clareza conceptual nós consideramos cada cópia de um pai como distinta. Isto significa que podem haver múltiplas raízes ancestrais que são a mesma chave.   
+
+%The keys $K^{base}_A,K^{base}_B,K^{base}_C$ are considered {\em root ancestors}, while $\mathbb{K}^{agg,{1\textrm{x}2}}_{BC}$ is the {\em child} of {\em parents} $K^{base}_B$ and $K^{base}_C$. Parents can have more than one child, though for conceptual clarity we consider each copy of a parent as distinct. This means there can be multiple root ancestors that are the same key. 
+
+Por exemplo, neste 2-de-3 ou 1-de-2 junto a um 2-de-2, a chave da carol $K^{base}_C$ é usada duas vezes e representada duas vezes :
+%For example, in this 2-of-3 and 1-of-2 joined in a 2-of-2, Carol's key $K^{base}_C$ is used twice and displayed twice:
+\begin{center}
+    \begin{forest}
+        forked edges,
+        for tree = {edge = {<-, > = triangle 60}
+                    ,fork sep = 4.5 mm,
+                    ,l sep = 8 mm
+                    ,circle, draw
+                    },
+        where n children=0{tier=terminus}{},
+        [$K^{grp,{2\textrm{x}2}}$
+            [$\mathbb{K}^{agg,{2\textrm{x}3}}_{ABC}$
+                [$K^{base}_A$]
+                [$K^{base}_B$]
+                [$K^{base}_C$]
+            ]
+            [$\mathbb{K}^{agg,{1\textrm{x}2}}_{CD}$
+                [$K^{base}_C$]
+                [$K^{base}_D$]
+            ]
+        ]
+    \end{forest}    
+\end{center}
+
+
+Conjuntos distintos $\mathbb{S}$ são definidos para cada sub-coalição de multi-assinatura. Existem trés conjuntos de premerge no exemplo anterior :
+\begin{align*}
+\mathbb{S}^{\textrm{2x3}}_{ABC} = \{K^{sh,\textrm{2x3}}_{AB},K^{sh,\textrm{2x3}}_{BC},K^{sh,\textrm{2x3}}_{AC}\}$, $\mathbb{S}^{\textrm{1x2}}_{CD} = \{K^{sh,\textrm{1x2}}_{CD}\}$, e $\mathbb{S}^{\textrm{2x3}}_{final} = \{\mathbb{K}^{agg,{2\textrm{x}3}}_{ABC},\mathbb{K}^{agg,{1\textrm{x}2}}_{CD}\} .
+\end{align*}
+
+%Separate sets $\mathbb{S}$ are defined for each multisig sub-coalition. There are three premerge sets in the previous example: 
+%$\mathbb{S}^{\textrm{2x3}}_{ABC} = \{K^{sh,\textrm{2x3}}_{AB},K^{sh,\textrm{2x3}}_{BC},K^{sh,\textrm{2x3}}_{AC}\}$, $\mathbb{S}^{\textrm{1x2}}_{CD} = \{K^{sh,\textrm{1x2}}_{CD}\}$, and $\mathbb{S}^{\textrm{2x3}}_{final} = \{\mathbb{K}^{agg,{2\textrm{x}3}}_{ABC},\mathbb{K}^{agg,{1\textrm{x}2}}_{CD}\}$.
+
+
+\subsection{Chaves de multi-assinatura inclusivas}
+\label{subsec:nesting-multisig-keys}
+
+Seja a seguinte família de chaves
+%Suppose we have the following key family
+\begin{center}
+    \begin{forest}
+        forked edges,
+        for tree = {edge = {<-, > = triangle 60}
+                    ,fork sep = 4.5 mm,
+                    ,l sep = 8 mm
+                    ,circle, draw
+                    },
+        where n children=0{tier=terminus}{},
+        [$K^{grp,{2\textrm{x}3}}$
+            [$K^{grp,{2\textrm{x}3}}_{ABC}$
+                [$K^{base}_A$]
+                [$K^{base}_B$]
+                [$K^{base}_C$]
+            ]
+            [$K^{base}_D$]
+            [$K^{base}_E$]
+        ]
+    \end{forest}    
+\end{center}
+
+Se juntar-mos as chaves em $\mathbb{S}^{\textrm{2x3}}_{ABC}$ correspondentes aos primeiros 2-de-3, irá acontecer uma situação no próximo nível. Escolha-se só um segredo partilhado, entre $K^{grp,\textrm{2x3}}_{ABC}$ e $K^{base}_D$ : \vspace{.175cm} 
+\begin{align*}
+k_{ABC,D} = \mathcal{H}_n(k^{grp,\textrm{2x3}}_{ABC} K^{base}_D)
+\end{align*}
+
+%If we merge the keys in $\mathbb{S}^{\textrm{2x3}}_{ABC}$ corresponding to the first 2-of-3, we run into an issue at the next level. Let's take just one shared secret, between $K^{grp,\textrm{2x3}}_{ABC}$ and $K^{base}_D$, to illustrate:\vspace{.175cm}
+%\[k_{ABC,D} = \mathcal{H}_n(k^{grp,\textrm{2x3}}_{ABC} K^{base}_D)\]
+
+Agora, duas pessoas de ABC podem fácilmente contribuir componentes de agregação de chave, tal que a sub-coalição possa calcular : 
+\begin{align*}
+k^{grp,\textrm{2x3}}_{ABC} K^{base}_D = \sum k^{agg,\textrm{2x3}}_{ABC} K^{base}_D
+\end{align*}
+%Now, two people from ABC could easily contribute aggregation key components so the sub-coalition can compute
+O problema é que qualquer participante de ABC pode calcular :
+\begin{align*}
+k^{sh,\textrm{2x3}}_{ABC,D} = \mathcal{H}_n(k^{grp,\textrm{2x3}}_{ABC} K^{base}_D) !
+\end{align*}
+
+Se todos os participantes de uma camada de multi-assinatura mais baixa, sabem todas as chaves privadas de uma camada de multi-assinatura mais elevada, então o esquema é escusado e é como se a camada de baixo fosse 1-de-N.  
+
+%The problem is everyone from ABC can compute $k^{sh,\textrm{2x3}}_{ABC,D} = \mathcal{H}_n(k^{grp,\textrm{2x3}}_{ABC} K^{base}_D)$! If everyone from a lower-tier multisig knows all its private keys for a higher-tier multisig, then the lower-tier multisig might as well be 1-of-N.
+
+Isto é resolvido ao não juntar completamente as chaves até á chave final.\newline Em vez disso faz-se {\tt premerge} para todas as chaves das camadas mais baixas.  
+
+%We get around this by not completely merging keys until the final child key. Instead, we just do {\tt premerge} for all keys output by low-tier multisigs.
+
+\subsubsection*{Solução para a inclusão}
+
+Para usar $\mathbb{K}^{agg,\textrm{MxN}}$ numa nova multi-assinatura, esta é passada entre os participantes, com uma alteração. Operações que involvam $\mathbb{K}^{agg,\textrm{MxN}}$ usam cada uma das suas chaves membro, em vez de uma chave junta de grupo. Por exemplo, a `chave' pública de um segredo partilhado entre $\mathbb{K}^{agg,\textrm{2x3}}_x$ e $K^{base}_A$ iria ser :
+\vspace{.175cm}
+\[\mathbb{K}^{sh,\textrm{1x2}}_{x,A} = \{ [\mathcal{H}_n(k^{base}_A \mathbb{K}^{agg,\textrm{2x3}}_x[1])*G], [\mathcal{H}_n(k^{base}_A \mathbb{K}^{agg,\textrm{2x3}}_x[2])*G], ...\}\]  
+
+%To use $\mathbb{K}^{agg,\textrm{MxN}}$ in a new multisig, we pass it around just like a normal key, with one change. Operations involving $\mathbb{K}^{agg,\textrm{MxN}}$ use each of its member keys, instead of the merged group key. For example, the public `key' of a shared secret between $\mathbb{K}^{agg,\textrm{2x3}}_x$ and $K^{base}_A$ would look like\vspace{.175cm}
+%\[\mathbb{K}^{sh,\textrm{1x2}}_{x,A} = \{ [\mathcal{H}_n(k^{base}_A \mathbb{K}^{agg,\textrm{2x3}}_x[1])*G], [\mathcal{H}_n(k^{base}_A \mathbb{K}^{agg,\textrm{2x3}}_x[2])*G], ...\}\]
+
+Desta forma todos os membros de :
+\begin{align*}
+\mathbb{K}^{agg,\textrm{2x3}}_x ,
+\end{align*}
+só sabem os segredos partilhados correspondentes ás suas chaves privadas da camada abaixo de multi-assinatura 2-de-3. Uma operação entre um conjunto de chaves de tamanho 2 ${}^{2}\mathbb{K}_A$ e um conjunto de chaves de tamanho 3 ${}^{3}\mathbb{K}_B$ iria produzir um conjunto de chaves de tamanho 6 ${}^{6}\mathbb{K}_{AB}$.\newline Podemos generalizar todas as chaves numa família de chaves como conjuntos de chaves, em que chaves individuais são denotadas ${}^{1}\mathbb{K}$ .\newline Elementos num conjunto de chaves são ordenados segundo uma convenção (por exemplo lexicográfica), e conjuntos que contenham conjuntos de chave (e.g. conjuntos $\mathbb{S}$ ), são ordenados pelo primeiro elemento em cada conjunto de chave.   
+%This way all members of $\mathbb{K}^{agg,\textrm{2x3}}_x$ only know shared secrets corresponding to their private keys from the lower-tier 2-of-3 multisig. An operation between a keyset of size two ${}^{2}\mathbb{K}_A$ and keyset of size three ${}^{3}\mathbb{K}_B$ would produce a keyset of size six ${}^{6}\mathbb{K}_{AB}$. We can generalize all keys in a key family as keysets, where single keys are denoted ${}^{1}\mathbb{K}$. Elements of a keyset are ordered according to some convention (i.e. smallest to largest numerically), and sets containing keysets (e.g. $\mathbb{S}$ sets) are ordered by the first element in each keyset, according to some convention.\\
+Deixa-se que os conjuntos de chave se propaguem pela estrutura de família, em que cada grupo de multi-assinatura inclusiva envia o seu conjunto de agregação {\tt premerge} como a `chave base' para a próxima camada.
+%We let the key sets propagate through the family structure, with each nested multisig group sending their {\tt premerge} aggregation set as the `base key' for the next level,
+\footnote{Note-se que {\tt premerge} precisa de ser feito ás saídas de {\em todas} as multi-assinaturas inclusivas, mesmo quando uma multi-assinatura N-de-N está incluída em outra N-de-N, porque o conjunto $\mathbb{S}$ muda.}
+%Note that {\tt premerge} needs to be done to the outputs of {\em all} nested multisigs, even when an N'-of-N' multisig is nested into an N-of-N, because the set $\mathbb{S}$ will change.} 
+Até que aparece o conjunto de agregação do último filho, em que finalmente é utilizado {\tt merge}.
+%until the last child's aggregation set appears, at which point {\tt merge} is finally used.\\
+Monerianos devem guardar as suas chaves privadas base, as chaves privadas de agregação para todas as camadas de uma estrutura de família de multi-assinatura, e as chaves públicas para todas as camadas. Ao fazer isto é mais fácil criar novas estruturas, fazer {\tt merge} de multi-assinaturas inclusivas, e colaborar com outros signatários para reconstruír uma estrutura de família caso haja um problema.  
+
+%Users should store their base private keys, the aggregation private keys for all levels of a multisig family structure, and the public keys for all levels. Doing so facilitates creating new structures, {\tt merging} nested multisigs, and collaborating with other signers to rebuild a structure if there is a problem.
+
+
+\subsection{Implicações}
+
+Cada sub-coalição que contribui para a chave final precisa de contribuir componentes para uma transacção de Monero (tal como os valores iniciais $\alpha G$), e como tal cada sub-sub-coalição precisa de contribuir para a sub-coalição filho.
+
+%Each sub-coalition contributing to the final key needs to contribute components to Monero transactions (such as the opening values $\alpha G$), and so every sub-sub-coalition needs to contribute to its child sub-coalition. 
+
+Isto significa que cada raíz ancestral, mesmo quando existem múltiplas cópias da mesma chave na estrutura da família, tem de contribuir uma componente raíz ao filho do próximo nível. E cada filho por sua vez tem de contribuir uma componente ao seu filho. E isto para cada camada. São usadas somas simples a cada nível.   
+%This means every root ancestor, even when there are multiple copies of the same key in the family structure, must contribute one root component to their child, and each child one component to its child and so on. We use simple sums at each level.
+
+Por exemplo, seja esta família :
+\begin{center}
+    \begin{forest}
+        forked edges,
+        for tree = {edge = {<-, > = triangle 60}
+                    ,fork sep = 4.5 mm,
+                    ,l sep = 8 mm
+                    ,circle, draw
+                    },
+        where n children=0{tier=terminus}{},
+        [${}^{1}\mathbb{K}^{grp,{2\textrm{x}2}}$
+            [${}^{1}\mathbb{K}^{base}_A$]
+            [${}^{2}\mathbb{K}^{agg,{2\textrm{x}2}}_{AB}$
+                [${}^{1}\mathbb{K}^{base}_A$]
+                [${}^{1}\mathbb{K}^{base}_B$]
+            ]
+        ]
+    \end{forest}    
+\end{center}
+
+Seja que é necessário calcular um valor de grupo $x$ para uma assinatura. Raízes ancestrais contribuem : 
+%Say they need to compute some group value $x$ for a signature. Root ancestors contribute: 
+\begin{align*}
+x_{A,1}, x_{A,2}, x_B . 
+\end{align*}
+O total é :
+\begin{align*}
+x = x_{A,1} + x_{A,2} + x_B .
+\end{align*}
+
+Não existem actualmente implementações de multi-assinaturas inclusivas em Monero.
+
+%There are currently no implementations of nested multisig in Monero.
