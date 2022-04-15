@@ -325,24 +325,24 @@ Se a imagem de chave em questão foi criada com $K^o$ então o ponto resultante 
 
 O provador cria duas provas de múltipla-base (secção \ref{sec:proofs-discrete-logarithm-multiple-bases}). O seu endereço, que possui a saída em questão é $(K^v, K^s)$ or $(K^{v,i}, K^{s,i})$. Provas de não-gasto são feitas da mesma forma para endereços normais como para sub-endereços. A chave de gasto do sub-endereço é necessária, ou seja : 
 \begin{align*}
-k^{s,i} = k^s + \mathcal{H}_n(k^v,i)$ \ref{sec:subaddresses}
+k^{s,i} = k^s + \mathcal{H}_n(k^v,i) \ref{sec:subaddresses}
 \end{align*}
 
 %Our prover creates two multi-base proofs (recall Section \ref{sec:proofs-discrete-logarithm-multiple-bases}). His address, which owns the output in question, is $(K^v, K^s)$ or $(K^{v,i}, K^{s,i})$.\footnote{UnspentProofs are made the same way for subaddresses and normal addresses. The full spend key of a subaddress is required, e.g. $k^{s,i} = k^s + \mathcal{H}_n(k^v,i)$ (Section \ref{sec:subaddresses}).}
-
+\iffalse
 \begin{enumerate}
     \item Uma prova com 3 bases, em que a chave signatária é $k^s$, e\vspace{.175cm}  
     \begin{align*}
-        \mathcal{J}^{nãogasto}_3 &= \{[G], [K^s], [\tilde{K}^s_?]\}\\
-        \mathcal{K}^{nãogasto}_3 &= \{[K^s], [k^s*K^s], [k^s*\tilde{K}^s_?]\}
+        \mathcal{J}^{\textrm{nãogasto}}_3 &= \{[G], [K^s], [\tilde{K}^s_?]\}\\
+        \mathcal{K}^{\textrm{nãogasto}}_3 &= \{[K^s], [k^s*K^s], [k^s*\tilde{K}^s_?]\}
     \end{align*}{}
     \item Uma prova com 2 bases, em que a chave signatária é $k^s*k^s$, e\vspace{.175cm}
     \begin{align*}
-        \mathcal{J}^{nãogasto}_2 &= \{[G], [\mathcal{H}_p(K^o)]\}\\
-        \mathcal{K}^{nãogasto}_2 &= \{[k^s*K^s], [k^s*k^s*\mathcal{H}_p(K^o)]\}
+        \mathcal{J}^{\textrm{nãogasto}}_2 &= \{[G], [\mathcal{H}_p(K^o)]\}\\
+        \mathcal{K}^{\textrm{nãogasto}}_2 &= \{[k^s*K^s], [k^s*k^s*\mathcal{H}_p(K^o)]\}
     \end{align*}{}
 \end{enumerate}{}
-
+\fi
 Juntamente com as provas $\sigma^{unspent}_3$ e $\sigma^{unspent}_2$, o provador também fornece as chaves públicas $k^s*K^s$, $k^s*\tilde{K}^s_?$ e $k^s*k^s*\mathcal{H}_p(K^o)$.
 
 %Along with proofs $\sigma^{unspent}_3$ and $\sigma^{unspent}_2$, the prover makes sure to communicate the public keys $k^s*K^s$, $k^s*\tilde{K}^s_?$, and $k^s*k^s*\mathcal{H}_p(K^o)$.
@@ -350,7 +350,7 @@ Juntamente com as provas $\sigma^{unspent}_3$ e $\sigma^{unspent}_2$, o provador
 \subsubsection*{Verificação}
 
 \begin{enumerate}
-    \item Confirmar que as provas $\sigma^{nãogasto}_3$ e $\sigma^{nãogasto}_2$ são legitimas.
+    \item Confirmar que as provas $\sigma^{\textrm{nãogasto}}_3$ e $\sigma^{\textrm{nãogasto}}_2$ são legitimas.
     \item Ter a certeza de que a mesma chave pública $k^s*K^s$ foi utilizada em ambas as provas. 
     \item Verificar se $k^s*\tilde{K}^s_?$ e $k^s*k^s*\mathcal{H}_p(K^o)$ são iguais. Se são então a saída está gasta, e se não então a saída não está gasta (enp).
 

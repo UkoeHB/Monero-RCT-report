@@ -120,7 +120,7 @@ Por exemplo $7*8 \pmod 9$, esta sequência acontece :
 Claramente $8^7 \pmod 9 = 8*8*8*8*8*8*8 \pmod 9$. Da mesma forma que duplica-e-adiciona, pode-se também levar-ao-quadrado-e-multiplicar. Para $a^e \pmod{n}$ :
 %Just like double-and-add, we can do square-and-multiply. For $a^e \pmod{n}$:
 \begin{enumerate}
-	\item Define-se $e_{scalar} \rightarrow e_{binário}$; $A = [e_{binário}]$; $r = 1$; $m = a$
+%	\item Define-se $e_{scalar} \rightarrow e_{binário}$; $A = [e_{binário}]$; $r = 1$; $m = a$
 	\item Itera-se através de : $i = (0,...,A_{size} - 1)$
 	\begin{enumerate}
 		\item Se A[i] == 1, então $r = r * m \pmod n$.
@@ -248,10 +248,7 @@ y_3 & =  \frac{y_1 y_2 - a x_1 x_2}{1 - d x_1 x_2 y_1 y_2} \pmod{q}
 \end{align*}
 \\
 Estas formulas para adição também se aplicam para duplicar um ponto, isto é, se \(P_1 = P_2\).\newline Para subtraír um ponto, inverte-se as suas coordinadas sobre o eixo y : $(x,y) \rightarrow (-x,y)$ \cite{Bernstein2008}, e depois aplica-se duplicar o ponto. Note-se que elementos negativos em $\mathbb{F}_q$, $-x$ são : $-x \pmod{q}$.
-
-%These formulas for addition also apply for point doubling; that is, when  \(P_1 = P_2\). To subtract a point, invert its coordinates over the y-axis, $(x,y) \rightarrow (-x,y)$ \cite{Bernstein2008}, and use point addition. Recall that `negative' elements $-x$ of $\mathbb{F}_q$ are really $-x \pmod{q}$.
 \\
-
 Sempre que pontos de curva elíptica são adicionados, $P_3$ é um ponto que se mantêm na curva elíptica. Ou seja $x_3,y_3 \in \mathbb{F}_q$, e satisfazem a equação de CE. Daqui em diante diz-se que o ponto $x_3,y_3$ está em CE. Ou então, o Ponto $P$ em CE. 
 
 %Whenever two curve points are added together $P_3$ is a point on the `original' elliptic curve, or in other words all $x_3,y_3 \in \mathbb{F}_q$ and satisfy the EC equation.
@@ -690,7 +687,7 @@ em que $l$ é um número primo e $c$ é um inteiro positivo. No caso de Monero, 
 \begin{align*}
 2^3 \cdot 72370055773322622139731865630429942408\\57116359379907606001950938285454250989
 \end{align*}
-\marginnote{src/ringct/ rctOps.h {\tt curve- Order()}}\]
+\marginnote{src/ringct/ rctOps.h {\tt curve- Order()}}
 
 
 \subsection{Representação binária}
@@ -855,6 +852,7 @@ No contexto da ciência da computação, XOR é equivalente a adição de bits m
 
 %At the same time, anyone who knows two of the elements in $\{A,B,C\}$, where $C = \text{XOR}(A,B)$, can calculate the third element, such as $A = \text{XOR}(B,C)$. XOR indicates if two elements are different or the same, so knowing $C$ and $B$ is enough to expose $A$. A careful examination of the truth table reveals this vital feature.
 Seja que a alice quer encriptar um vector privado de $n$ bits V, usa-se então um segredo partilhado, um vector S do mesmo comprimento. Aplica-se a operação XOR a cada par de bits, entre V e S. O resultado m é enviado para bob. O bob faz a mesma operação invertida, e obtêm o mesmo vector privado V. Note-se que um observador que desconhece S, e só conhece m, é incapaz de descobrir V.\newline Existem pois $2^n$ combinações distintas de V e S que resultam no mesmo m \footnote{Uma outra aplicação de XOR é trocar o conteúdo de dois registos sem um terceiro registo. $\{A, B\} \rightarrow{} \{[A \oplus B], B\} \rightarrow{} \{[A \oplus B], B \oplus [A \oplus B]\} = \{[A \oplus B], A \oplus 0\} = \{[A \oplus B], A\} \rightarrow{} \{[A \oplus B] \oplus A, A\} = \{B, A\}$.} .
+
 \tikzstyle{process} = [rectangle, minimum width=3cm, minimum height=1cm, text centered, draw=black, fill=orange!30]
 \tikzstyle{arrow} = [thick,->,>=stealth]
 \\

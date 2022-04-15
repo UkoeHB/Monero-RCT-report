@@ -27,8 +27,6 @@ Se \(C(a)\) e \(C(b)\) são os compromissos respectivos aos valores \(a\) e \(b\
 \begin{align*}
 C(a + b) = C(a) + C(b) . 
 \end{align*}
-
-%A {\em Pedersen commitment} \cite{Pedersen1992} is a commitment that has the property of being {\em additively homomorphic}. If \(C(a)\) and \(C(b)\) denote the commitments for values \(a\) and \(b\) respectively, then \(C(a + b) = C(a) + C(b)\).\footnote{Additively homomorphic in this context means addition is preserved when you transform scalars into EC points by applying, for scalar $x$, $x \rightarrow x G$.} This property will be useful when committing transaction amounts, as one can prove, for instance, that inputs equal outputs, without revealing the amounts at hand.
 \\
 Felizmente, compromissos de pedersen são fáceis de implementar com criptografia de curva elíptica. O seguinte é trivial : 
 
@@ -226,9 +224,9 @@ Excepto o {\em m-ésimo pseudo compromisso de saída}, em que :\marginnote{genRc
 \label{sec:range_proofs}
 
 Um problema com compromissos additivos é o de valores negativos. Sejam $C(a_1)$, $C(a_2)$, $C(b_1)$, $C(b_2)$ e pretende-se provar que :
-\[(a_1 + a_2) - (b_1 + b_2) = 0$\]
+\[(a_1 + a_2) - (b_1 + b_2) = 0\]
 Uma solução é :
-\[$a_1 = 6$, $a_2 = 5$, $b_1 = 21$, and $b_2 = -10$\]
+\[a_1 = 6, a_2 = 5, b_1 = 21, and b_2 = -10\]
 
 %One problem with additive commitments is that, if we have commitments $C(a_1)$, $C(a_2)$, $C(b_1)$, and $C(b_2)$ and we intend to use them to prove that $(a_1 + a_2) - (b_1 + b_2) = 0$, then those commitments would still apply if one value in the equation were `negative'.
 

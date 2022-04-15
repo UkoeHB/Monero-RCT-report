@@ -130,7 +130,7 @@ tal que $\mathcal{H}_i(\mathfrak{m},n)$ tem como resultado um número menor ou i
 \mathcal{H}_i(\mathfrak{m},n) \in \{1,...,5\}
 \end{align*}
 %Say we are given a message $\mathfrak{m}$, and told to find a `nonce' $n$ (some integer) such that $\mathcal{H}_i(\mathfrak{m},n)$ outputs a number less than or equal to the {\em target} $t = 5$ (i.e. $\mathcal{H}_i(\mathfrak{m},n) \in \{1,...,5\}$). 
-Desde que só $1/20-ésimo$ dos resultados de $\mathcal{H}_i(x)$ irá estar dentro do alvo, deve levar por volta de 20 tentativas para encontrar um $n$ que funcione. Ou seja por volta de 20 minutos de tempo de computação.   
+Desde que só $1/20\textrm{-ésimo}$ dos resultados de $\mathcal{H}_i(x)$ irá estar dentro do alvo, deve levar por volta de 20 tentativas para encontrar um $n$ que funcione. Ou seja por volta de 20 minutos de tempo de computação.   
 %Since only $1/20$\nth of outputs from $\mathcal{H}_i(x)$ will meet the target, it should take around 20 guesses of $n$ to find one that works (and hence 20 minutes of computing time).
 Estar á procura de um tal argumento {\em nonce} útil é chamado {\em mineração}, e publicar tal mensagem com $n$ é uma {\em prova de trabalho}. Note-se que qualquer pessoa pode verificar isto ao calcular $\mathcal{H}_i(\mathfrak{m},n)$. 
 
@@ -329,7 +329,7 @@ A primeira recompensa base de bloco, dispersada ao pseudónimo thankful\_for\_to
 %For an interesting comparison of Monero and Bitcoin's emission schedules see \cite{monero-coin-emission}.}
 , a recompensa base de bloco foi duplicada. Isto só significa, que depois da mudança faz-se (L-M) $>>$ 19, em vez de $>>$ 20 para novos blocos. Actualmente a recompensa base de bloco é :     
 \begin{align*}
-\[\textrm{B} = \frac{(L-M) >> 19}{10^{12}}\]
+\textrm{B} = \frac{(L-M) >> 19}{10^{12}}
 \end{align*}
 
 %As blocks are mined M grows, lowering subsequent block rewards. Initially (since the genesis block in April 2014) Monero blocks were mined once per minute, but in March 2016, it became two minutes per block \cite{monero-0.9.3}. To keep the rate of money creation, i.e. the `emission schedule',\footnote{For an interesting comparison of Monero and Bitcoin's emission schedules see \cite{monero-coin-emission}.} the same, block rewards were doubled. This just means, after the change, we use (L-M) $>>$ 19 instead of $>>$ 20 for new blocks. Currently the base block reward is\marginnote{src/crypto- note\_basic/ cryptonote\_ basic\_ impl.cpp {\tt get\_block\_ reward()}}\vspace{.175cm}
@@ -381,8 +381,8 @@ A efectiva mediana de peso de longo termo está relacionada com a mediana dos 10
 \footnote{No início,\marginnote{src/crypto- note\_basic/ cryptonote\_ basic\_ impl.cpp {\tt get\_min\_ block\_ weight()}} o termo de `300kB' era de 20kB, depois aumento para 60kB em março de 2016 (v2 do protocolo) \cite{monero-0.9.3}, e tem sido 300kB desde abril de 2017 (v5 do protocolo) \cite{monero-v5}. Este `chão' não nulo na mediana do peso dinámico de bloco ajuda nas mudanças voláteis do volume de transacções transientes, quando este volume é baixo, especialmente no começo de adopção de Monero.}  
 %Blockchain::get_next_long_term_block_weight()
 
-    $\textrm{peso\ de\_bloco\ de\_longo\ termo} &= min\{\textrm{peso\ de\ bloco},$\\ $1.4*\textrm{a\ anterior\ efectiva\ mediana\ de\ longo\ termo}\}$\\
-    $\textrm{efectiva\ mediana\ de\ longo\ termo} &= max\{\textrm{300kB},$ \\
+    $\textrm{peso\ de\_bloco\ de\_longo\ termo} = min\{\textrm{peso\ de\ bloco},$\\ $1.4*\textrm{a\ anterior\ efectiva\ mediana\ de\ longo\ termo}\}$\\
+    $\textrm{efectiva\ mediana\ de\ longo\ termo} = max\{\textrm{300kB},$ \\
     $\textrm{a\ mediana\ dos\ pesos\ de\ longo\ termo\ de\ 100000\ blocos}\}$%m_long_term_effective_median_block_weight
 
 Se os pesos de bloco normais se mantêm elevados durante um longo periodo de tempo, então irá levar pelo menos 50,000 blocos (por volta de 69 dias) para que a mediana effectiva de longo termo cresca por 40\%. É esse o tempo que leva para que o peso de longo termo se torne na mediana.
@@ -396,11 +396,11 @@ Para suavizar essa variabilidade\marginnote{{\tt CRYPTONOTE\_ REWARD\_ BLOCKS\_ 
 %To smooth\marginnote{{\tt CRYPTONOTE\_ REWARD\_ BLOCKS\_ WINDOW}} out transient variability, a block's cumulative median uses the median of the last 100 blocks' normal block weights (including its own).\vspace{.1cm}
 
 $\textrm{Mediana\ de\ peso\ comulativo} = max\{\textrm{300kB},$\\ 
-$min\{&max\{\textrm{300kB},$\\
+$min\{max\{\textrm{300kB},$\\
 $\textrm{mediana\ dos\ pesos\ dos\ 100blocos\ passados}\},$\\
-$&50*\textrm{mediana\ efectiva\ de\ longo\ termo}\}\}$
+$50*\textrm{mediana\ efectiva\ de\ longo\ termo}\}\}$
 %HF_VERSION_EFFECTIVE_SHORT_TERM_MEDIAN_IN_PENALTY %update_next_cumulative_weight_limit() %m_current_block_cumul_weight_median %CRYPTONOTE_SHORT_TERM_BLOCK_WEIGHT_SURGE_FACTOR = 50
-\end{align*}
+%\end{align*}
 
 O próximo bloco a ser incluído na lista de blocos está constrangido da seguinte maneira:
 %The next block to be added to the blockchain is constrained in this way:
@@ -435,10 +435,9 @@ A recompensa de bloco é portanto :
 \end{align*}
 
 Ao usar a operação \^{}2 significa que as multas são sub-proporcional ao peso de bloco. Por exemplos :
-\newline Um peso de bloco 10\% maior do que as medianas comulativas anteriores só têm 1\% de multa.    
-\newline Um peso de bloco 50\% maior têm uma multa de 25\% .
-
-\newline Um peso de bloco 90\% maior têm uma multa de 81\% , etc \cite{monero-coin-emission}
+Um peso de bloco 10\% maior do que as medianas comulativas anteriores só têm 1\% de multa.\\    
+Um peso de bloco 50\% maior têm uma multa de 25\% .\\
+Um peso de bloco 90\% maior têm uma multa de 81\% , etc \cite{monero-coin-emission}
 
 %Using the \^{}2 operation means penalties are sub-proportional to block weight. A block weight 10\% larger than the previous cumulative\_weights\_median has just a 1\% penalty, 50\% larger is 25\% penalty, 90\% larger is 81\% penalty, and so on. \cite{monero-coin-emission}\\
 

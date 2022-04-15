@@ -8,25 +8,14 @@ Em termos digitais é trivial fazer inúmeras cópias de informação, e também
 
 
 %We can use cryptographic tools to allow data registered in an easily accessible database - the blockchain - to be virtually immutable and unforgeable, with legitimacy that cannot be disputed by any party.
-\newline
-Cripto-moedas guardam as transacções na lista de blocos. Esta lista de blocos é imutável e não falsificável com uma legítimidade que não pode ser disputada. A maioria das cripto-moedas guardam as transacções em texto claro e não encriptado, para facilitar a verificação das mesmas pela comunidade de utilizadores. Claramente uma lista de blocos desta natureza desafia qualquer conceito básico de privacidade ou de fungíbilidade. Visto que as transacções de qualquer pessoa estão literalmente abertas para que o público as veja.
- 
-%Cryptocurrencies store transactions in the blockchain, which acts as a public ledger
-%\footnote{In this context ledger just means a record of all currency creation and exchange events. Specifically, how much money was transferred in each event and to whom.} of all the currency operations. Most cryptocurrencies store transactions in clear text, to facilitate verification of transactions by the community of users.
-\\ \newline
-%Clearly, an open blockchain defies any basic understanding of privacy or fungibility
-\footnote{``\textbf{Fungível} significa capaz de mútua substituição no uso ou satisfação de um contrato. Exemplos : ... Dinheiro, etc \cite{mises-org-fungible}. Numa lista de blocos aberta como em Bitcoin, as moedas possuídas pela alice podem ser diferenciadas daquelas possuídas pelo bob, com base no histórico de transacções dessas moedas. Se o histórico de transacções incluí transacções relacionadas com actores supostamente nefastos, então essas moedas podem estar manchadas \cite{bitcoin-big-bang-taint}. Como tal, tais moedas tornam-se menos valiosas do que outras, para mais diz que Bitcoins acabados de minerar (vírgens), são mais caros pois não têm histórico \cite{new-bitcoin-premium}.}
-%means capable of mutual substitution in use or satisfaction of a contract. ... Examples: ... money, etc."\cite{mises-org-fungible} In an open blockchain such as Bitcoin, the coins owned by Alice can be differentiated from those owned by Bob based on the `transaction history' of those coins. If Alice's transaction history includes transactions related to supposedly nefarious actors, then her coins might be `tainted' \cite{bitcoin-big-bang-taint}, and hence less valuable than Bob's (even if they own the same amount of coins). Reputable figures claim that newly minted Bitcoins trade at a premium over used coins, since they don't have a history \cite{new-bitcoin-premium}.}
-%, since it literally {\em publicizes} the complete transaction histories of its users.
-\\ \newline
+
+Cripto-moedas guardam as transacções na lista de blocos. Esta lista de blocos é imutável e não falsificável com uma legítimidade que não pode ser disputada. A maioria das cripto-moedas guardam as transacções em texto claro e não encriptado, para facilitar a verificação das mesmas pela comunidade de utilizadores. Claramente uma lista de blocos desta natureza desafia qualquer conceito básico de privacidade ou de fungíbilidade. Visto que as transacções de qualquer pessoa estão literalmente abertas para que o público as veja \footnote{ \textbf{Fungível} significa capaz de mútua substituição no uso ou satisfação de um contrato. Exemplos : ... Dinheiro, etc \cite{mises-org-fungible}. Numa lista de blocos aberta como em Bitcoin, as moedas possuídas pela alice podem ser diferenciadas daquelas possuídas pelo bob, com base no histórico de transacções dessas moedas. Se o histórico de transacções incluí transacções relacionadas com actores supostamente nefastos, então essas moedas podem estar manchadas \cite{bitcoin-big-bang-taint}. Como tal, tais moedas tornam-se menos valiosas do que outras, para mais diz que Bitcoins acabados de minerar (vírgens), são mais caros pois não têm histórico \cite{new-bitcoin-premium}.} .
+\\
 Para evitar a falta de privacidade, utilizadores de cripto-moedas como Bitcoin podem obfuscar transacções ao utilizar endereços intermediáros \cite{DBLP:journals/corr/NarayananM17}. Mesmo assim com certas ferramentas é possivel analizar e muitas vezes ligar remetentes com destinatários \cite{DBLP:journals/corr/ShenTuY15b, DK-police-tracing-btc, Andrew-Cox-Sandia, chainalysis-2020-report}.
-  
-%To address the lack of privacy, users of cryptocurrencies such as Bitcoin can obfuscate transactions by using temporary intermediate addresses \cite{DBLP:journals/corr/NarayananM17}. However, with appropriate tools it is possible to analyze flows and to a large extent link true senders with receivers \cite{DBLP:journals/corr/ShenTuY15b, DK-police-tracing-btc, Andrew-Cox-Sandia, chainalysis-2020-report}.
 
 Em contraste, a cripto-moeda Monero (Moe-neh-row), utiliza endereços ocultos para receber montantes e assinaturas em anel para enviar montantes na lista de blocos.  
 Com estes methodos não existem caminhos conhecidos para desvendar a ligação entre remetentes e destinatários. Adicionalmente os montantes em sí são escondidos por construções criptográficas, o que torno o fluxo de montantes opáco.\newline O resultado é uma cripto-moeda com um elevado grau de privacidade e fungibilidade.
 
-%In contrast, the cryptocurrency Monero (Moe-neh-row) attempts to tackle the issue of privacy by storing only single-use addresses for receipt of funds in the blockchain, and by authenticating the dispersal of funds in each transaction with ring signatures. With these methods there are no known generally effective ways to link receivers or trace the origin of funds.
 \footnote{Dependendo do comportamento dos utilizadores, podem haver casos em que as transacções são analisáveis até um certo grau. Para um exemplo veja-se este artigo : \cite{monero-ring-heuristics-ryo}.}
 %Depending on the behavior of users, there may be cases where transactions can be analyzed to some extent. For an example see this article: \cite{monero-ring-heuristics-ryo}.}
 
@@ -109,11 +98,8 @@ Desde a sua incepção, Monero fortaleceu a sua privacidade ainda mais, ao imple
 \subsection{Parte 1: `Essenciais'}
 
 Nesta saga de conhecimento, são apresentados os elementos básicos de criptografia necessários para perceber as complexidades de Monero.\newline No capítulo \ref{chapter:basicConcepts} são desenvolvidos os aspectos essentiais de criptografia de curva elíptica.  
-
-%In our quest for comprehensiveness, we have chosen to present all the basic elements of cryptography needed to understand the complexities of Monero, and their mathematical antecedents. In Chapter \ref{chapter:basicConcepts} we develop essential aspects of elliptic curve cryptography.
-\newline No capítulo \ref{chapter:advanced-schnorr} expande-se o esquema de assinaturas tipo Schnorr do capítulo anterior. E esplica-se os algoritmos de assinaturas em anel que são aplicados para alcançar transacções confidenciais.
-
-%Chapter \ref{chapter:advanced-schnorr} expands on the Schnorr signature scheme from the prior chapter, and outlines the ring signature algorithms that will be applied to achieve confidential transactions.
+\\
+No capítulo \ref{chapter:advanced-schnorr} expande-se o esquema de assinaturas tipo Schnorr do capítulo anterior. E esplica-se os algoritmos de assinaturas em anel que são aplicados para alcançar transacções confidenciais.
 
 No capítulo \ref{chapter:addresses} esplora-se como Monero utiliza endereços para controlar a posse de montantes, e os diferentes tipos de endereços.
 
@@ -132,17 +118,13 @@ Uma cripto-moeda é mais do que o próprio protocolo, e em `extensões' fala-se 
 \footnote{Note-se que as versões futuras do protocolo em Monero, especialmente aquelas que mudam a estrutura das transacções, podem fazer estas ideias impossíveis ou impraticáveis.}
 %Please note that future protocol versions of Monero, especially those implementing new transaction protocols, may make any or all of these ideas impossible or impractical.}
 Várias informações sobre uma transacção pode ser provadas a observadores, e esses methodos são o conteúdo do capítulo \ref{chapter:tx-knowledge-proofs}.
-
 %Various information about a transaction can be proven to observers, and those methods are the content of Chapter \ref{chapter:tx-knowledge-proofs}.
 Enquanto não essencial para a operação de Monero, existe muita utilidade em multi-assinaturas o que permite múltiplas pessoas enviar e receber fundos colaborativamente.
 O capítulo \ref{chapter:multisignatures} descreve o esquema actual de multi-assinaturas de Monero, e também os seus futuros possíveis desenvolvimentos.
 %While not essential to the operation of Monero, there is a lot of utility in multisignatures that allow multiple people to send and receive money collaboratively. 
 %Chapter \ref{chapter:multisignatures} describes Monero's current multisignature approach and outlines possible future developments in that area.%This is formally called (N-1)-of-N and N-of-N threshold authentication.
-
 O capítulo \ref{chapter:escrowed-market} constitui a architectura de mercados de garantia online com multi-assinaturas.  
-
 %Of extreme importance is applying multisig to the interactions of vendors and shoppers in online marketplaces. Chapter \ref{chapter:escrowed-market} constitutes our original design of an escrowed marketplace using Monero multisig.
-
 Primeiro apresentado aqui, TxTangle, descrito no capítulo \ref{chapter:txtangle}, é um protocolo decentralizado para reunir transacções de múltiplos individuos para uma só transacção.
 
 %First presented here, TxTangle, outlined in Chapter \ref{chapter:txtangle}, is a decentralized protocol for joining the transactions of multiple individuals into one.
@@ -191,4 +173,3 @@ Investigaram-se provas relacionadas com transacções (capítulo \ref{chapter:tx
 Escrito pelo autor `koe'.
 Este relatório não existiria sem a these de mestrado de Kurt Alonso \cite{kurt-original}, portanto a ele tenho uma enorme dívida de gratidão. O pesquisador Brandon ``Surae Noether" Goodell e o pseudónimo `Sarang Noether' do laboratório de pesquisas de Monero (MRL), têm sido fontes de conhecimento confiáveis ao longo do  desenvolvimento de ambas as edições de zero a Monero.\newline O pseudónimo `moneromooo', o programador mais prolífico do código fonte do projecto de Monero, tem provavelmente o conhecimento mais extensivo do código neste planeta, e deu-me númeras vezes as direcções indicadas. E claro outros contribuidores magníficos de Monero que gastaram tempo a esplicarem-me as minhas inúmeras questões. E finalmente os vários leitores que nos contactaram com comentários encoragedores, obrigado !         
 
-%This report would not exist without Kurt's original master's thesis \cite{kurt-original}, so to him I owe a great debt of gratitude. Monero Research Lab (MRL) researchers Brandon ``Surae Noether" Goodell and pseudonymous `Sarang Noether' (who collaborated with me on Section \ref{sec:range_proofs} and Chapter \ref{chapter:tx-knowledge-proofs}) have been a reliable and knowledgeable resource throughout both editions of Zero to Monero's development. Pseudonymous `moneromooo', the Monero Project's most prolific core developer, has probably the most extensive understanding of the codebase on this planet, and has pointed me in the right direction numerous times. And of course, many other wonderful Monero contributors have spent time answering my endless questions. Finally, to the various individuals who contacted us with proofreading feedback, and encouraging comments, thank you!

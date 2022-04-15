@@ -187,7 +187,7 @@ Estes esquemas com anonimidade e espontaínidade chamam-se `assinaturas de anel'
 
 \subsection*{Assinatura}
 
-Assinaturas em anel são compostas de um anel e uma assinatura. Cada {\em anel} é um conjunto de chaves públicas, uma das quais pertence ao signatário, e as restantes são aleatórias. A assinatura é gerada com esse anel de chaves e com a mensagem \mathfrak{m}.
+Assinaturas em anel são compostas de um anel e uma assinatura. Cada {\em anel} é um conjunto de chaves públicas, uma das quais pertence ao signatário, e as restantes são aleatórias. A assinatura é gerada com esse anel de chaves e com a mensagem $\mathfrak{m}$.
 
 A nossa assinatura tipo Schnorr na secção \ref{sec:signing-messages} pode ser considerada uma assinatura em anel com uma só chave. Podemos extender este esquema, em vez de definir-mos $r$ directamente, gera-se uma resposta desvio $r'$ bem como um segundo desafio, de forma a definir $r$ indirectamente. Note-se que á primeira vista o que se segue é confuso. Porque de facto existem dois aneís. O anel \(\mathcal{R} = \{K_1, K_2, ..., K_n\}\), é incluído explícitamente na assinatura como parâmetro da função hash. Se $\mathcal{R}$ fosse público, seria possível ao inspector verificar a assinatura á mesma, pois as chaves em $\mathcal{R}$ seriam implícitas.
 
@@ -270,7 +270,8 @@ c'_1 &= \mathcal{H}_n(\mathcal{R}, \mathfrak{m}, [r_3 G + c'_3 K_3])
 
 Os esquemas de assinaturas em anel apresentados daqui em diante, contêm certas propriedades que irão ser úteis para produzir transacções confidenciais.
 \footnote{Note-se que todos os esquemas de assinatura robustos têm modelos de segurança que contêm diversas propriedades. As propriedades mencionadas aqui são talvez o mais relevantes para perceber o propósito das assinaturas em anel de Monero, mas não são uma visão geral das propriedades das assinaturas ligadas em anel.}
-Keep in mind that all robust signature schemes have security models which contain various properties. The properties mentioned here are perhaps most relevant to understanding the purpose of Monero's ring signatures, but are not a comprehensive overview of linkable ring signature properties.} Note-se que `inforjabilidade' e a `ambiguidade do signatário' também se aplicam a assinaturas SAG.
+%Keep in mind that all robust signature schemes have security models which contain various properties. The properties mentioned here are perhaps most relevant to understanding the purpose of Monero's ring signatures, but are not a comprehensive overview of linkable ring signature properties.} 
+Note-se que `inforjabilidade' e a `ambiguidade do signatário' também se aplicam a assinaturas SAG.
 
 \begin{description}
 	\item[Ambiguídade do signatário]
@@ -482,8 +483,8 @@ Temos então também um conjunto de \(n \cdot m\) chaves ($n$ é o comprimento d
 
 As chaves privadas {\em primárias} têm o index de \(j = 1\). 
 
-Existem então para \(j = 1\), $n$ chaves {\em primárias}, em que assina a $\pi-ésima$.
-E existem para \(j > 1\), $n$ chaves {\em auxiliares}, em que também assina a $\pi-ésima$.  
+Existem então para \(j = 1\), $n$ chaves {\em primárias}, em que assina a $\pi-\textrm{ésima}$.
+E existem para \(j > 1\), $n$ chaves {\em auxíliares}, em que também assina a $\pi-\textrm{ésima}$.  
 
 Temos posse do conjunto de chaves privadas \(\{k_{\pi, j}\}\) pertencentes ao conjunto de chaves públicas \(\{K_{\pi, j}\}\) para o index secreto \(i = \pi\).
 

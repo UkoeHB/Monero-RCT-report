@@ -239,7 +239,7 @@ Da mesma forma que com a abordagem ingénua, qualquer terceiro que saiba $\mathb
 
 \subsubsection*{Funções {\tt premerge} e {\tt merge}}
 
-Mais formalmente e para ser mais claro, diz-se que existe uma operação {\tt premerge}, que tem como argumento um conjunto de chaves base $\mathbb{S}^{base}$, e tem como resultado um conjunto de chaves agregadas $\mathbb{K}^{agg}$ de igual tamanho. Em que $\mathbb{K}^{agg}[e]$ é o $n-ésimo$ elemento do conjunto :
+Mais formalmente e para ser mais claro, diz-se que existe uma operação {\tt premerge}, que tem como argumento um conjunto de chaves base $\mathbb{S}^{base}$, e tem como resultado um conjunto de chaves agregadas $\mathbb{K}^{agg}$ de igual tamanho. Em que $\mathbb{K}^{agg}[e]$ é o $n\textrm{-ésimo}$ elemento do conjunto :
 \begin{align*}
 \mathbb{K}^{agg}[e] = \mathcal{H}_n(T_{agg},\mathbb{S}^{base},K^{s,base}_e)K^{s,base}_e
 \end{align*}
@@ -353,7 +353,7 @@ Transacções confidenciais em aneis com limite, adicionam alguma complexidade p
  
 %Monero thresholded ring confidential transactions add some complexity because MLSTAG (thresholded MLSAG) signing keys are one-time addresses and commitments to zero (for input amounts).
 
-Um endereço oculto que dá posse á $t-ésima$ saída a quem tiver o endereço público $(K^v_t,K^s_t)$ funciona da seguinte forma :
+Um endereço oculto que dá posse á $t\textrm{-ésima}$ saída a quem tiver o endereço público $(K^s_t, K^v_t)$ funciona da seguinte forma :
 %Recalling Section \ref{sec:multi_out_transactions}, a one-time address assigning ownership of a transaction's $t$\nth output to whoever has public address $(K^v_t,K^s_t)$ goes like this\vspace{.175cm}
 \begin{align*}
   K_t^o &= \mathcal{H}_n(r K_t^v, t)G + K_t^s = (\mathcal{H}_n(r K_t^v, t) + k_t^s)G  \\ 
@@ -1004,10 +1004,11 @@ Por exemplo, neste 2-de-3 ou 1-de-2 junto a um 2-de-2, a chave da carol $K^{base
 
 
 Conjuntos distintos $\mathbb{S}$ são definidos para cada sub-coalição de multi-assinatura. Existem trés conjuntos de premerge no exemplo anterior :
+\iffalse
 \begin{align*}
 \mathbb{S}^{\textrm{2x3}}_{ABC} = \{K^{sh,\textrm{2x3}}_{AB},K^{sh,\textrm{2x3}}_{BC},K^{sh,\textrm{2x3}}_{AC}\}$, $\mathbb{S}^{\textrm{1x2}}_{CD} = \{K^{sh,\textrm{1x2}}_{CD}\}$, e $\mathbb{S}^{\textrm{2x3}}_{final} = \{\mathbb{K}^{agg,{2\textrm{x}3}}_{ABC},\mathbb{K}^{agg,{1\textrm{x}2}}_{CD}\} .
 \end{align*}
-
+\fi
 %Separate sets $\mathbb{S}$ are defined for each multisig sub-coalition. There are three premerge sets in the previous example: 
 %$\mathbb{S}^{\textrm{2x3}}_{ABC} = \{K^{sh,\textrm{2x3}}_{AB},K^{sh,\textrm{2x3}}_{BC},K^{sh,\textrm{2x3}}_{AC}\}$, $\mathbb{S}^{\textrm{1x2}}_{CD} = \{K^{sh,\textrm{1x2}}_{CD}\}$, and $\mathbb{S}^{\textrm{2x3}}_{final} = \{\mathbb{K}^{agg,{2\textrm{x}3}}_{ABC},\mathbb{K}^{agg,{1\textrm{x}2}}_{CD}\}$.
 

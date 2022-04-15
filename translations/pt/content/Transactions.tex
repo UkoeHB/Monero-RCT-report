@@ -10,10 +10,7 @@ Depois dos capítulos \ref{chapter:addresses} e \ref{chapter:pedersen-commitment
 %``My transaction uses transaction public key $r G$. I will spend old output $X$ (note that it has a hidden amount $A_X$, committed to in $C_X$). I will give it a pseudo output commitment $C'_X$. I will make one output $Y$, which may be spent by the one-time address $K^o_Y$. It has a hidden amount $A_Y$ committed to in $C_Y$, encrypted for the recipient, and proven in range with a Bulletproofs-style range proof. Please note that $C'_X - C_Y = 0$."
 
 Algumas questões permanecem. O remetente tinha posse de $X$? O pseudo compromisso de saída $C'_X$ corresponde a $C_X$, tal que $A_X = A'_X = A_Y$? Será que alguêm alterou a transacção de forma a mudar o destinatário?  
-
-%Some questions remain. Did the author actually own $X$? Does the pseudo output commitment $C'_X$ actually correspond to $C_X$, such that $A_X = A'_X = A_Y$? Has someone tampered with the transaction, and perhaps directed the output at a recipient unintended by the original author?
 \\
-
 Como mencionado na secção \ref{sec:one-time-addresses}, nota-se a posse de uma saída de um endereço oculto, com a chave privada de {\em ver}. Como veremos neste capítulo, prova-se a posse da saída de um endereço oculto ao assinar uma mensagem com a chave privada de {\em gasto}. Prova-se também que o montante no compromisso de saída anterior, entrada actual de transacção, é igual ao montante do pseudo compromisso de saída, com a chave privada do {\em compromisso a zero}. 
 
 %As mentioned in Section \ref{sec:one-time-addresses}, we can prove ownership of an output by signing a message with its one-time address (whoever has the address's key owns the output). We can also prove it has the same amount as a pseudo output commitment by proving knowledge of the commitment to zero's private key ($C_X - C'_X = z_X G$). 
@@ -129,7 +126,7 @@ O signatário para assinar uma das $m$ entradas, mistura um conjunto de tamanho 
 \end{align*}
 \vspace{.175cm}
 
-\newline Note-se que as entradas desvio contêm compromissos a zero que são falsos. Ou seja $C^a_{i, j} - C'^a_{\pi, j}$, para $i\ne\pi$ é somente um ponto de CE. O componente $H$ dessa subtracção é irrelevante. Para mais, o ponto de CE resultante dessa subtracção só é relevante para a construção formal do anel.
+Note-se que as entradas desvio contêm compromissos a zero que são falsos. Ou seja $C^a_{i, j} - C'^a_{\pi, j}$, para $i\ne\pi$ é somente um ponto de CE. O componente $H$ dessa subtracção é irrelevante. Para mais, o ponto de CE resultante dessa subtracção só é relevante para a construção formal do anel.
 
 A alice usa uma assinatura tipo MLSAG para assinar este anel, em que ela conhece as chaves privadas $k^o_{\pi,j}$ para $K^o_{\pi,j}$, e $z_j$ para o compromisso a zero $(C^a_{\pi,j}$ - $C'^a_{\pi,j})$.
 
@@ -169,7 +166,6 @@ A verificação de uma assinatura é feita da seguinte maneira :
 	\item Se \(c_1 = c'_1\) então a assinatura é válida.
 
 \end{enumerate}
-\newline
 Cada anel $R_j$ é iniciado em duas partes, primeiro com $\alpha_{1}$ e depois com $\alpha_{2}$. Note-se que a assinatura com $z_j$, o {\em compromisso a zero} acontece da seguinte forma :
 \begin{align*}
  \alpha_2 G &= (r_{\pi, 2} + c_{\pi} z_j)G\\

@@ -53,6 +53,8 @@ Um comprador devia poder aceder á loja online, enquanto o vendedor está offlin
 
 Todas as compras deviam caber dentro do mesmo conjunto de passos, assumindo que todos os partidos agem com a diligência devida. Um moderador antes de servir dois partidos, espera um número de passos já executados, por exemplo : "antes de involverem um moderador, um dos partidos já pediu um reembolso ?" 
 %All purchases should fit within the same set of steps, assuming all parties do their due diligence. A number of steps are related to what a moderator should expect when stepping in, e.g. ``did you request a refund, before getting me involved?".
+
+\iffalse
 \begin{enumerate}
     \item Um comprador acede a uma loja online do vendedor, identifica o produto, selecciona `comprar isto', disponibiliza fundos para essa compra, e depois submete a ordem de compra ao vendedor.
 %A buyer accesses the vendor's online shop, identifies a purchase to make, selects `I want to purchase it', makes funding available for that purchase, then submits the purchase order to the vendor.
@@ -115,7 +117,7 @@ Todas as compras deviam caber dentro do mesmo conjunto de passos, assumindo que 
     \end{itemize}{}
 \end{enumerate}{}
 
-
+\fi
 
 \section{Multi-assinatura Monero}
 \label{sec:escrowed-marketplace-seamless-multisig}
@@ -194,6 +196,8 @@ Simplificar desta forma remove uma ronda de comunicação, o que tem consequênc
 \label{subsec:escrowed-marketplace-escrow-user-experience}
 
 Aqui está uma compra online que involve uma multi-assinatura 2-de-3, apresentada em detalhe e passo a passo. As interacções seguintes são entre o comprador, o vendedor e o moderador.
+\iffalse
+
 \begin{enumerate}
     \item {\em Uma compra}
     \begin{enumerate}
@@ -205,9 +209,7 @@ Aqui está uma compra online que involve uma multi-assinatura 2-de-3, apresentad
         \item {\em O comprador adiciona um produto ao cesto}: O utilizador decide que quer fazer uma compra, primeiro selecciona a opção de pagamento, se ele selecciona uma multi-assinatura 2-de-3, então são apresentados os moderadores disponíveis dos quais ela pode escolher um. Quando o utilizador adiciona o produto ao seu cesto de compras, o seu cliente usa a chave base do produto, a chave base do moderador e a chave pública do segredo partilhado entre o vendedor e o moderador, para, em combinação com a sua própria chave de gasto (como a sua chave base), construír um endereço multi-assinatura 2-de-3 entre comprador, vendedor e moderador. Note-se que o utilizador possui um sub-endereço para a sessão de compras.
 \footnote{Está aberto á interpretação exactamente como um mercado online deve ser implementado. Por exemplo o tipo de pagamento pode ser apresentado ao comprador no fim, ou quando ele adiciona o produto `ao cesto'.}
 %Exactly how a marketplace should be implemented is open to interpretation, since for example selecting the payment type for a product could be presented to the user at checkout instead of in the `add to cart' interface.}\\
-A chave de ver é uma hash da chave privada do segredo partilhado entre o comprador e o vendedor. E a chave de encriptação das comunicações entre o comprador e o vendedor, é uma hash da chave de ver.
-\footnote{Este mesmo processo aconteceria para uma multi-assinatura 1-de-2, o que exclui a necessidade de um moderador.} 
-This same process would take place for 1-of-2 multisig, leaving out the moderator.}
+A chave de ver é uma hash da chave privada do segredo partilhado entre o comprador e o vendedor. E a chave de encriptação das comunicações entre o comprador e o vendedor, é uma hash da chave de ver\footnote{Este mesmo processo aconteceria para uma multi-assinatura 1-de-2, o que exclui a necessidade de um moderador.}. 
         \item {\em O comprador vai para o checkout}: 
 Antes de finalizar a ordem de compra, os fundos têm de ser disponibilizados. O cliente constrõe uma transacção (mas ainda não a assina), que irá pagar o vendedor directamente, ou depositar os fundos num endereço de multi-assinatura (com um pouco mais para taxas futuras). Se for feito um depósito para um endereço de multi-assinatura 2-de-3, o cliente também inicia duas transacções que enviam dinheiro para fora desse endereço. Uma pode ser usada para pagar ao vendedor, e a outra para reembolsar o comprador.  É importante iniciar transacções separadas pois os valores de abertura comprometidos só podem ser usados uma vez. As imagens de chave parciais das entradas dependem da transacção de depósito que ainda não foi assinada.      
 Ele só precisa de valores de abertura comprometidos para duas transacções, e depois separadamente uma cópia das imagens de chave parciais (com prova de legitimidade) e uma cópia do seu sub-endereço para a sessão de compras. Esse sub-endereço tem dois propósitos; é o endereço do comprador para fins de reembolso e de troco, e a sua chave de gasto é a chave base de multi-assinatura. 
@@ -218,6 +220,8 @@ Ele só precisa de valores de abertura comprometidos para duas transacções, e 
 %If her cart contained multiple vendors' products, then her client can create multiple purchase orders and handle them separately. The vendors can all be paid by the same funding transaction.}
 A transacção contêm a ordem de compra, a hash da transacção de depósito, as transacções iniciadas de multi-assinatura, e a chave pública do segredo partilhado entre o comprador e o moderador.
 \footnote{O software do comprador deve acompanhar os detalhes das ordens de compra, como o preço total, para que mais tarde o conteúdo das transacções de multi-assinatura seja verificado antes de assinar.}   
+\fi
+\iffalse
 %The buyer's client should keep track of payment order details like total price, to later verify the content of multisig transactions before signing them.}
     \end{enumerate}{}
     \item {\em O vendedor realiza a ordem de compra}
@@ -267,8 +271,9 @@ Note that he reconstructs the multisig address out of the buyer-vendor-moderator
     \end{enumerate}{}
 \end{enumerate}{}
 
+\fi
+
 Existem quatro optimizações instaladas.
-%There are four key design optimizations installed.
 
 \subsubsection*{moderadores pre-seleccionados}
 
@@ -336,5 +341,3 @@ Os moderadores ganham acesso á comunicação entre o comprador e o vendedor, e 
 %It is important for moderators to verify the communication log they receive hasn't been tampered with. One way might be for each cosigner to include a signed hash of the current message log whenever they send out a new message. Moderators can look at the back-and-forth, and series of hashed logs, to identify discrepancies. It would also help cosigners identify messages that failed to transmit, and alternatively create evidence that particular signers did in fact receive certain messages.}
 
 Para mais, vendedores podem verificar que o anfitrião do mercado online (que pode também ser o único moderador disponível, dependendo da forma como isto é implementado) não é MITM (`homem no meio') das suas comunicações com os clientes. Os vendedores verificam que as chaves base que eles publicam para cada produto é igual aquele que é mostrado publicamente no mercado. Como a chave base do comprador, que é usada para criar o endereço de multi-assinatura, também é parte da chave de encriptação, um anfitrião malicioso não consegue orquestrar um ataque MITM (enp).
-  
-%Moreover, vendors can verify the marketplace host (who may also be the only moderator available, depending on how this concept is implemented) is not MITM (`man in the middle') of their conversations with customers (i.e. pretending to be the buyer or vendor) by checking that the base keys they publish for each product match what gets displayed. Since the buyer's base key, which gets used to create the multisig address, is also part of the encryption key, a malicious host would have a hard time orchestrating a MITM attack.
