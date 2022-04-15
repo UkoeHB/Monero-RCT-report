@@ -1,0 +1,343 @@
+\chapter{Mercados garantidos por terceiros}
+\label{chapter:escrowed-market}
+
+Na maioria das vezes, as compras online acontecem sem problemas. O comprador envia dinheiro ao vendedor, e o produto esperado aparece em casa. Se o produto tem um defeito, ou se o comprador muda de ideias, o produto pode ser devolvido, e o comprador é reembolsado.   
+%Most of the time purchasing from an online retailer goes smoothly. A buyer sends money to a vendor, and the expected product arrives at their doorstep. If the product has a defect, or in some cases if the buyer changes their mind, they can return it and get a refund.
+É difícil confiar numa pessoa ou organização descohnecida, e muitos compradores podem-se sentir seguros sabendo que as companhias de cartões de crédito irão possivelmente reverter as transacções \cite{credit-card-reversals}.   
+
+%It's difficult to trust a person or organization you have never met, and many shoppers can feel safe in their purchases knowing their credit card company will reverse a payment on request \cite{credit-card-reversals}.
+
+As transacções de cripto-moedas não são reversíveis, e existe um recurso legal limitado para o comprador ou vendedor quando algo corre mal. Especialmente com Monero, porque as transacções não são analisadas facilmente por entidades terceiras \cite{chainalysis-2020-report}.   
+%Cryptocurrency transactions are not reversible, and there is limited legal recourse a buyer or seller can take when something goes wrong, especially for Monero which is not open to easy chain analysis \cite{chainalysis-2020-report}. 
+
+Um aspecto central a fazer compras online são mercados garantidos por terceiros, em que são usadas multi-assinaturas 2-de-3. Assim entidades terceiras são capazes de mediar disputas. Ao confiar nessas entidades, vendedores e compradores anónimos conseguem interagir sem formalidades. 
+
+%The cornerstone of robust online shopping with cryptocurrencies is 2-of-3 multisignature-based escrowed exchanges, which enable third parties to mediate disputes. By trusting those third parties, even completely anonymous vendors and shoppers can interact without formality.
+
+Em Monero as interacções com multi-assinaturas são complexas.  
+%(secção \ref{sec:simplified-communication}). 
+Neste capítulo é descrito um mercado online efficiente garantido por terceiros \footnote{René Brunner ``rbrunner7", um contribuidor de Monero que crio o MMS \cite{mms-project-proposal, mms-manual}, investigou integrar as multi-assinaturas em Monero no mercado digital baseado em cripto-moedas chamado {\em OpenBazaar} \url{https://openbazaar.org/}. Os conceitos aí apresentados são inspirados pelas dificuldades que René encontrou \cite{openbazaar-rbrunner-investigation} (his `earlier analysis').}\footnote{A implementação actual de multi-assinaturas em Monero, já tem a sequência de passos na criação de transacção, desejada para mercados online garantidos por terçeiros. O que é bom, mas note-se que multi-assinaturas precisam de actualizações de segurança, antes de serem utilizadas em grande escala. \cite{multisig-research-issue-67}.}. 
+%Since Monero multisig interactions can be rather complex (recall Section \ref{sec:simplified-communication}), we dedicate this chapter to describing a maximally efficient escrowed shopping environment.
+%Ren\'e ``rbrunner7"\ Brunner, a Monero contributor who created the MMS \cite{mms-project-proposal, mms-manual}, investigated integrating Monero multisig into the decentralized cryptocurrency-based digital marketplace OpenBazaar \url{https://openbazaar.org/}. The concepts laid out here are inspired by the hurdles Ren\'e encountered \cite{openbazaar-rbrunner-investigation} (his `earlier analysis').}
+%Our initial impression is Monero's current implementation of multisig already has a similar transaction creation flow to what we need for an escrowed shopping environment, which is good news for potential implementation efforts. Readers should note that Monero multisig requires some security updates before it can see heavy use \cite{multisig-research-issue-67}.}
+
+\section{Características essenciais}
+\label{sec:escrowed-marketplace-essential-features}
+
+Existem vários requisitos básicos para as interacções entre vendedores e compradores em mercados online. Estes pontos são da investigação de René acerca de OpenBazaar \cite{openbazaar-rbrunner-investigation}.
+%There are several basic requirements and features for streamlined interactions between buyers and sellers online. We take these points from Ren\'e's OpenBazaar investigation \cite{openbazaar-rbrunner-investigation}, as they are quite sensible and extensible.
+\begin{itemize}
+    \item {\em venda offline}: 
+Um comprador devia poder aceder á loja online, enquanto o vendedor está offline, e fazer uma compra. É claro que o vendedor tem de ir online para receber a compra e finalizar a venda. Ou seja enviar o produto ao comprador. 
+%A buyer should be able to access a vendor's online shop and place an order while the vendor is offline. Obviously, the vendor must actually go online to receive the order and fulfill it.
+%\footnote{Fulfilling a purchase order means sending the product out to be delivered to the purchaser.}
+    \item {\em Compras com pagamentos ordenados}: Os endereços do vendedor são únicos para cada venda, de forma a ligar cada venda com o seu pagamento.   
+%Vendor addresses for receipt of funds are unique for each purchase order, in order to match orders and payments.
+    \item {\em Compras de alta confiança}: Um comprador pode, se confia no vendedor, pagar por um produto mesmo antes deste estar disponível ou ser ser entregue. 
+    \begin{itemize}
+        \item {\em pagamento online directo}: Depois de confirmar que o vendedor está online, e que o produto listado está disponível, o comprador envia o dinheiro numa só transacção a um endereço do vendedor, e este depois signaliza que a compra está a ser efectuada. 
+%After confirming the vendor is online, and that their product listing is available, the purchaser sends money in a single transaction to the vendor via a vendor-provided address, who then signals the order is being fulfilled.
+        \item {\em Pagamento offline}: Se o vendedor está offline, o comprador cria e envia um montante para um endereço multi-assinatura 1-de-2, com dinheiro suficiente para finalizar a compra. Quando o vendedor volta a estar online, ele pode tirar o dinheiro do endereço de multi-assinatura, e executar a venda. Se o vendedor nunca mais volta a estar online (ou depois de um certo tempo de espera), ou se o comprador muda de ideias antes dele voltar a estar online, o comprador pode tirar o dinheiro desse endereço de multi-assinatura de volta para a sua carteira pessoal.   
+%If a vendor is offline, the buyer creates and funds a 1-of-2 multisig address with enough money to cover their intended purchase. When the vendor comes online, they may take money out of the multisig address (sending change back to the buyer), and fulfill the order. If the vendor never comes back online (or e.g. after some reasonable waiting period), or if the buyer changes their mind before he comes back, the buyer may empty the 1-of-2 address back into her personal wallet.
+    \end{itemize}{}
+    \item {\em Compra através de um moderador}: Um endereço de multi-assinatura 2-de-3 é construido entre o comprador o vendedor e o moderador. O moderador é aceite pelo comprador e pelo vendedor. O comprador envia dinheiro para este endereço antes do vendedor enviar o produto. Uma vez que o produto tenha sido entregue ao comprador, os dois partidos cooperam para que os fundos sejam libertados. Se o comprador e o vendedor não chegam a um acordo, estes podem delegar o julgamento ao moderador.  
+%A 2-of-3 multisig address is constructed between the buyer, vendor, and a moderator agreed on by both buyer and vendor. The buyer funds this address before vendor fulfillment, and then once the product is delivered two of the parties cooperate to release the funds. If the vendor and buyer can't reach an agreement, they may enlist the moderator's judgement.
+\end{itemize}
+
+
+%We will not cover high-trust purchasing, as, without any complex communication required, the features are fairly trivial.\footnote{1-of-2 multisig can take advantage of some concepts useful for 2-of-3 multisig, in particular constructing the address in the first place.}
+
+
+\subsection{Sequência de passos na compra}
+\label{subsec:escrowed-marketplace-purchasing-workflow}
+
+Todas as compras deviam caber dentro do mesmo conjunto de passos, assumindo que todos os partidos agem com a diligência devida. Um moderador antes de servir dois partidos, espera um número de passos já executados, por exemplo : "antes de involverem um moderador, um dos partidos já pediu um reembolso ?" 
+%All purchases should fit within the same set of steps, assuming all parties do their due diligence. A number of steps are related to what a moderator should expect when stepping in, e.g. ``did you request a refund, before getting me involved?".
+
+\iffalse
+\begin{enumerate}
+    \item Um comprador acede a uma loja online do vendedor, identifica o produto, selecciona `comprar isto', disponibiliza fundos para essa compra, e depois submete a ordem de compra ao vendedor.
+%A buyer accesses the vendor's online shop, identifies a purchase to make, selects `I want to purchase it', makes funding available for that purchase, then submits the purchase order to the vendor.
+    \item O vendedor recebe uma ordem de compra, verifica que o produto está em stock, e que os fundos são suficientes. Assim ou o dinheiro é devolvido ao comprador ou a ordem de compra é realizada pelo vendedor ao enviar o produto e notificar o comprador com um recibo.  
+%The vendor receives the purchase order, verifies the product is in stock and the available funding is enough, and either returns money to the buyer or fulfills the order by shipping out the product and notifying the buyer with a receipt.
+    \begin{itemize}
+        \item Para uma multi-assinatura 2-de-3, o comprador pode opcionalmente autorizar o pagamento ao receber a notificação de que a ordem de compra foi realizada  pelo vendedor.
+%For a 2-of-3 multisig, the buyer can optionally authorize payment when receiving notification of fulfillment.
+    \end{itemize}{}
+    \item O comprador recebe o produto como esperado, ou não recebe o produto a tempo, ou recebe o produto defeituoso.
+%The buyer either receives the product as expected, or doesn't receive the product on time or receives a defective product.
+    \begin{itemize}
+        \item {\em Bom produto}: O comprador envia uma resposta ao vendedor, ou não faz nada. 
+%The buyer either gives feedback to the vendor, or does nothing.
+        \begin{itemize}
+            \item {\em O comprador envia uma resposta ao vendedor}: O comprador pode enviar uma resposta positiva ou negativa. 
+%The buyer can leave either positive, or negative feedback.
+            \begin{itemize}
+                \item {\em resposta positiva}: Se isto é uma multi-assinatura 2-de-3 que ainda não foi paga, então este é o passo em que o comprador confirma o pagamento ao vendedor. Se não trata-se somente de uma resposta positiva. 
+%If this is a 2-of-3 multisig that hasn't been paid yet, then this is the step where the buyer confirms payment to the vendor. Otherwise it's just a positive review. [END OF WORKFLOW]
+                \item {\em resposta negativa}: Se isto é uma multi-assinatura 2-de-3, então este passo leva á sequência de passos de `mau produto'. Se não trata-se somente de uma resposta negativa. 
+%If this is a 2-of-3 multisig, then this step leads into the `bad product' workflow. Otherwise it's just a negative review.
+            \end{itemize}{}
+            \item {\em O comprador nada faz}: O vendedor já foi pago, ou trata-se de uma multi-assinatura 2-de-3 e o comprador precisa de cooperar com alguêm para receber os fundos. 
+%Either the vendor has already been paid, or it's a 2-of-3 multisig and he needs to cooperate with someone to receive funds.
+            \begin{itemize}
+                \item {\em O vendedor foi pago}: [FIM DE SEQUÊNCIA]
+                \item {\em O vendedor não foi pago}: O vendedor procura o pagamento.
+                \begin{enumerate}
+                    \item O vendedor contacta o comprador e requer o pagamento (ou envia-lhe um lembrete).
+                    \item O comprador pode responder ou não responder.
+                    \begin{itemize}
+                        \item {\em O comprador responde}: A resposta do comprador pode ser de efectuar o pagamento, ou de procurar um reembolso.\\
+                        $>$ {\em O comprador faz o pagamento}: [FIM DE SEQUÊNCIA]\\
+                        $>$ {\em O comprador procura um reembolso}: Ir para a sequência de passos `mau produto'.
+                        \item {\em O comprador não responde}: O vendedor usa a ajuda do moderador para libertar os fundos. [FIM DE SEQUÊNCIA]
+                    \end{itemize}{}
+                \end{enumerate}{}
+            \end{itemize}
+        \end{itemize}{}
+        \item {\em Nenhum ou mau produto}: O comprador procura um reembolso.
+        \begin{enumerate}
+            \item O comprador contacta o vendedor e pede um reembolso, talvez com uma explicação.
+            \item O vendedor cumpre com o requisito de reembolso, contesta ou ignora o mesmo.
+            \begin{itemize}
+                \item {\em O vendedor cumpre}: O dinheiro é reembolsado ao comprador. [FIM DE SEQUÊNCIA]
+                \item {\em O vendedor contesta}: Pode ser, ou não, uma multi-assinatura 2-de-3.
+                \begin{itemize}
+                    \item {\em Não é uma 2-de-3}: [FIM DE SEQUÊNCIA]
+                    \item {\em É uma 2-de-3}: O comprador desiste do requisito de reembolso (literalmente ou por não responder a tempo). Ou o comprador persiste com o pedido de reembolso. 
+                    \begin{itemize}
+                        \item {\em O comprador desiste}: O comprador autoriza o pagamento ao vendedor, ou não.\\
+                        $>$ {\em O comprador autoriza o pagamento}: [FIM DE SEQUÊNCIA]\\
+                        $>$ {\em O comprador não autoriza o pagamento}: O vendedor contacta o moderador, e este autoriza o pagamento. [FIM DE SEQUÊNCIA]
+                        \item {\em O comprador é persistente}: O comprador ou o vendedor contactam o moderador, e este coopera com os participantes para fazer o julgamento. [FIM DE SEQUÊNCIA]
+                    \end{itemize}{}
+                \end{itemize}
+            \end{itemize}{}
+        \end{enumerate}{}
+    \end{itemize}{}
+\end{enumerate}{}
+
+\fi
+
+\section{Multi-assinatura Monero}
+\label{sec:escrowed-marketplace-seamless-multisig}
+
+Uma interacção de multi-assinatura 2-de-3 pode ser feita quase completamente ao longo da sequência de passos na compra sem que os participantes notem. Existe um passo extra a fazer pelo vendedor no fim. Em que ele tem de assinar e submeter a transacção final para receber o pagamento. O que é comparável a retirar o dinheiro todo da caixa registadora.  
+%We can take advantage of the natural purchase order workflow to squeeze in nearly all parts of a Monero 2-of-3 multisignature interaction without the participants even noticing. There is an extra small step for the vendor at the end, where he must sign and submit the final transaction to receive payment, analogous to `emptying the cash register'.
+\footnote{Extender isto para além de (N-1)-de-N é provavelmente infazível sem adicionar mais passos, devido ás rondas adicionais necessárias para construir um endereço de multi-assinatura com uma barreira ({\tt M})mais baixa.}
+
+%Extending this beyond (N-1)-of-N is likely infeasible without more steps, due to the additional rounds necessary for setting up a lower threshold multisig address.}
+
+\subsection{Os básicos de uma interacção de multi-assinatura}
+\label{subsec:escrowed-marketplace-multisig-interaction-basics}
+
+Todas as interacções de multi-assinatura 2-de-3 contêm o mesmo conjunto de rondas de comunicação, o que involve a construção do endereço e depois da construção da transacção. De forma a cumprir com a sequência de passos usa-se um outro processo de construção do que aquele dado no capítulo de multi-assinatura \ref{sec:simplified-communication} e \ref{sec:n-1-of-n}. 
+
+%All 2-of-3 multisig interactions contain the same set of communication rounds, involving address setup and transaction building. In order to comply with the normal workflow we use a reorganized transaction construction process compared to our multisig chapter (recall Sections \ref{sec:simplified-communication} and \ref{sec:n-1-of-n}).
+\footnote{Este processo é actualmente bastante similar á organisação de transacções de multi-assinaturas em Monero.}  
+%This procedure is actually quite similar to how Monero currently organizes multisig transactions.}
+\begin{enumerate}
+    \item {\em Construír o endereço}
+    \begin{enumerate}
+        \item Todos os participantes têm de primeiro conhecer as chaves base dos outros participantes, o que irá ser usado para gerar segredos partilhados.\newline As chaves públicas desses segredos partilhados : 
+\begin{align*}
+K^{sh} = \mathcal{H}_n(k^{base}_A*k^{base}_B G) G .
+\end{align*}
+são enviados aos outros participantes.
+
+%All users must first learn the other participants' base keys, which they will use to construct shared secrets. They transmit the public keys of those shared secrets (e.g. 
+        \item Depois de um participante ter aprendido todas as chaves públicas de segredo partilhado, ele pode executar a função {\tt premerge} e depois {\tt merge}, o que gera a chave de gasto do endereço de grupo. As chaves agregadas privadas de gasto, irão ser usadas para assinar transacções.\newline Uma hash da chave privada do segredo partilhado :
+\begin{align*}
+k^{sh} = \mathcal{H}_n(k^{base}_A*k^{base}_B G) ,
+\end{align*}
+irá ser usada como a chave de ver : 
+\begin{align*}
+k^v = \mathcal{H}_n(k^{sh}) .
+\end{align*}
+%After learning all shared secret public keys, each user may {\tt premerge} and then {\tt merge} them into the address's public spend key. The aggregation private spend keys will be used for signing transactions. A hash of the primary signers' (the buyer and vendor) shared secret private key (e.g. $k^{sh} = \mathcal{H}_n(k^{base}_A*k^{base}_B G)$) will be used as the view key (e.g. $k^v = \mathcal{H}_n(k^{sh})$). We go into more detail on these keys later (Section \ref{subsec:escrowed-marketplace-escrow-user-experience}).
+    \end{enumerate}{}
+    \item {\em Construção da Transacção }: Seja que o endereço já possui pelo menos uma saída, e as imagens de chave são desconhecidas.\newline Existem dois signatários, o iniciador e o cosignatário.
+%Assume the address owns at least one output already, and the key images are unknown. There are two signers, the initiator and the cosigner.
+    \begin{enumerate}
+        \item {\em Iniciar uma transacção}: O iniciador decide começar uma transacção. Ele gera valores de abertura (e.g. $\alpha G$) para todas as saídas possuídas, e compromete-se a estas saídas. \newline Ele depois cria imagens de chave parciais para essas saídas possuídas, e assina essas imagens com uma prova de legitimidade (secção \ref{sec:recalculating-key-images-multisig}).\newline Ele depois envia essa informação, juntamente com o seu endereço para receber montantes, ao cosignatário.
+
+%The initiator decides to start a transaction. She generates opening values (e.g. $\alpha G$) for all owned outputs (she isn't sure which ones will get used yet), and commits to them. She also creates partial key images for those owned outputs, and signs them with a proof of legitimacy (recall Section \ref{sec:recalculating-key-images-multisig}). She sends that information, along with her own personal address for receipt of funds (e.g. for change if appropriate, etc.), to the cosigner.
+        \item {\em Fazer uma transacção parcial}: O cosignatário verifica que toda a informação na transacção inicial é válida. Ele depois decide os montantes e as saídas destinatárias, bem como as entradas e os membros desvio de anel, e a taxa de transacção.\newline Ele gera uma chave privada de transacção, cria endereços ocultos, compromissos de saída, montantes ocultos, máscaras de compromisso de pseudo saídas, e valores iniciais para os compromissos a zero.\newline Para provar que os montantes estão dentro do domínio, ele constroi a prova de domínio tipo Bulletproof para cada saída. 
+%??? para cada saída ? ou todas ao mesmo tempo?
+
+%The cosigner verifies that all information in the initiated transaction is valid. He decides the output recipients and amounts (they could be partially based on the initiator's recommendation), inputs to be used along with their respective ring member decoys, and the transaction fee. 
+%He generates a transaction private key (or keys if there are subaddresses involved), creates one-time addresses, output commitments, encoded amounts, pseudo output commitment masks, and opening values for the commitments to zero. To prove amounts are in range, he builds the Bulletproof range proof for all outputs. 
+Ele também gera valores de abertura para a sua assinatura sem compromissos, escalares aleatórios para a assinatura MLSAG, imagens de chave parciais para saídas possuídas, e provas de legitimidade para essas imagens parciais. Tudo isto é enviado ao iniciador.  
+%He also generates opening values for his signature (but does not commit to them), random scalars for the MLSAG signatures, partial key images for owned outputs, and proofs of legitimacy for those partial images. All of this is sent to the initiator.
+        \item {\em Assinatura parcial do iniciador} : O iniciador verifica que a informação da transacção parcial é válida, e é conforme as suas expectativas (os montantes e os recipientes são o que devem ser). O iniciador completa as assinaturas MLSAG e assina-as com as suas chaves privadas, depois envia esta transacção parcialmente assinada ao cosignatário juntamente com os valores de abertura revelados. 
+%Initiator's partial signature}: The initiator verifies the partial transaction's information is valid, and conforms with her expectations (e.g. amounts and recipients are as they should be). She completes the MLSAG signatures and signs them with her private keys, then sends the partially signed transaction to the cosigner along with her revealed opening values.
+        \item {\em Finalizar a transacção}: O cosignatário finaliza assinar a transacção, e submite isso á rede.
+%The cosigner finishes signing the transaction, and submits it to the network.
+    \end{enumerate}{}
+\end{enumerate}{}
+
+\subsubsection*{Assinaturas de compromisso único}
+
+Ao contrário daquilo que é recomendado no capítulo de multi-assinatura, só um compromisso é dado por cada transacção parcial (pelo iniciador da transacção). E este compromisso é revelado depois do cosignatário enviar para fora esse valor de abertura  explicitamente. O propósito de comprometer a valores de abertura (e.g. $\alpha G$) é de prevenir que um cosignatário malicioso possa usar o seu próprio valor de abertura para alterar o desafio que é produzido. Isto permitiria ao cosignatário malicioso de descobrir as chaves de agregação dos outros cosignatários (secção \ref{sec:threshold-schnorr}). \newline É necessário somente um valor de abertura desconhecido, quando o actor malicioso gera o seu valor de abertura, para que lhe seja impossível controlar o desafio.   
+%Unlike what is recommended in our multisig chapter, only one commitment is provided per partial transaction (by the transaction initiator), and it is revealed after the cosigner sends out their opening value explicitly. The purpose of committing to opening values (e.g. $\alpha G$) is to prevent a malicious cosigner from using their own opening value to affect the challenge that gets produced, which could allow him to discover other cosigners' aggregation keys (recall Section \ref{sec:threshold-schnorr}). If even one partial opening value is unavailable when the malicious actor generates his own, then it is impossible (or at least negligibly probable) for him to control the challenge.
+\footnote{Isto é também o porque do iniciador só revelar os seus valores de abertura depois de toda a informação de transacção ter sido determinada, assim nenhum signatário consegue alterar a mensagem MLSAG e influenciar o desafio.}
+%This is also why the initiator only reveals her opening values after all transaction information has been determined, so neither signer can alter the MLSAG message and influence the challenge.}
+\footnote{Assinar com só um compromisso, pode ser geralizado a assinar com (M-1) compromissos em que só o autor da transacção parcial é que não compromete-e-revela, e os restantes co-signatários só revelam quando a transacção está inteiramente determinada. Por exemplo, suponha-se que existe um endereço 3-de-3 com os co-signatários (A,B,C), que irão tentar assinar com só um compromisso. Os signatários B e C estão numa coalição maliciosa contra A, enquanto que C é o iniciador e B é o autor parcial da transacção. C inicia com um compromisso, e depois A oferece o seu valor de abertura (sem compromisso). Quando B constroi a transacção parcial, ele pode conspirar com C para controlar o desafio da assinatura de forma a expor a chave privada de A. Note-se também que assinar com (M-1) compromissos é um conceito original apresentado primeiro aqui. Ou seja não foi pesquisado nem investigado em outro lado por relatórios abstractos, nem existe implementação disto em código. Como tal, isto poderá vir a ser totalmente erróneo.}
+
+%Single-commitment signing could be generalized as (M-1)-commitment signing, where only the partial transaction author does not commit-and-reveal and other co-signers only reveal after a transaction is fully determined. For example, suppose there is a 3-of-3 address with cosigners (A,B,C), who will attempt single-commitment signing. Signers B and C are in a malicious coalition against A, while C is the initiator and B is the partial transaction author. C initiates with a commitment, then A provides his opening value (without commitment). When B constructs the partial transaction, he can conspire with C to control the signature challenge in order to expose A's private key. Please also note that (M-1)-commitment signing is an original concept first presented here, and is not backed by any advanced research material or code implementation. It may end up being completely erroneous.}
+\footnote{Uma forma de pensar sobre isto é de considerar o significado e propósito de um `compromisso' (secção \ref{sec:commitments}). Uma vez que a alice se compromete ao valor A, ela fica presa a esse compromisso, e não pode ter vantagens de informações do evento B (causado por bob) que acontece mais tarde. Para mais, se A ainda não foi revelado, então B não é influenciado por A. A alice e o bob têm a certeza de que A e B são independentes. Uma Assinatura de só um compromisso satisfaz esse standard, e é equivalente a assinaturas com todos os compromissos. Se o compromisso $c$ é uma função unidireccional de valores de abertura $\alpha_A G$ e $\alpha_B G$ (e.g. $c = \mathcal{H}_n(\alpha_A G,\alpha_B G)$), então se inicialmente é comprometido a $\alpha_A G$, e $\alpha_B G$ é revelado depois de $C(\alpha_A G)$ aparecer. E $\alpha_A G$ é revelado depois de $\alpha_B G$ aparecer, então $\alpha_B G$ e $\alpha_A G$ são independentes. Como tal $c$, irá ser aleatório da perspectiva da alice e do bob, excepto se ambos colaborarem, e (enp).} 
+%One way of thinking about this is to consider the meaning and purpose of a `commitment' (recall Section \ref{sec:commitments}). Once Alice commits to value A she is stuck with it, and can't take advantage of new information from event B (caused by Bob) that happens later. Moreover, if A hasn't been revealed then B can't be influenced by it. Alice and Bob can be sure that A and B are independent. It is our contention that single-commitment signing as described meets that standard, and is equivalent to full-commitment signing. If the commitment $c$ is a one-way function of opening values $\alpha_A G$ and $\alpha_B G$ (e.g. $c = \mathcal{H}_n(\alpha_A G,\alpha_B G)$), then if $\alpha_A G$ is committed to initially, $\alpha_B G$ is revealed after $C(\alpha_A G)$ appears, and $\alpha_A G$ is revealed after $\alpha_B G$ appears, then $\alpha_B G$ and $\alpha_A G$ are independent, and $c$ will be random from both Alice's and Bob's perspectives (unless they collaborate, and except with negligible probability).}
+
+Simplificar desta forma remove uma ronda de comunicação, o que tem consequências importantes para a experiência de interação entre o comprador e o vendedor. 
+%Simplifying in this way removes one communication round, which has important consequences for the buyer-vendor interaction experience.
+
+
+\subsection{Experiência com garantia para o utilizador}
+\label{subsec:escrowed-marketplace-escrow-user-experience}
+
+Aqui está uma compra online que involve uma multi-assinatura 2-de-3, apresentada em detalhe e passo a passo. As interacções seguintes são entre o comprador, o vendedor e o moderador.
+\iffalse
+
+\begin{enumerate}
+    \item {\em Uma compra}
+    \begin{enumerate}
+        \item {\em Uma nova sessão de compras} : Um utilizador entra dentro de um mercado online, o seu software cliente gera um novo subendereço para ser usado no caso de uma nova ordem de compra. Nesse mercado encontram-se vendedores, e cada vendedor ofereçe uma selecção de produtos com preços. O software cliente reconhece que cada produto tem uma chave base, que é usada em compras que usam multi-assinatura. Juntamente com essa chave base, existe uma lista de moderadores pre-seleccionados e cada moderador tem uma chave base, como também uma chave pública pre-computada de um segredo partilhado entre moderador e vendedor.
+\footnote{Usar um novo sub-endereço para cada ordem de compra, ou até um novo sub-endereço para cada vendedor ou para cada produto do vendedor, faz com que seja mais difícil para os vendedores conhecerem as acções dos seus clientes. Isto também ajuda a que cada compra seja única, mesmo se alguêm compra o mesmo duas vezes.}
+%Using a new subaddress for each purchase order, or even a new subaddress for each separate vendor or vendor's product, makes it more difficult for vendors to track the behavior of their customers. It also helps make sure each purchase order is unique, in the case of someone buying the same thing twice.}
+\footnote{Seria simples para que os vendedores também incluíssem, invisível aos compradores, compromissos aos valores de abertura para transacções. Contudo, para lidar com múltiplas ordens de compra para o mesmo produto, o vendedor teria de oferecer vários compromissos para cada potencial comprador. Isto seria demasiadamente complicado. A simplificação de assinar com só um compromisso tem esta utilidade.}
+%It would be straightforward for vendors to also include, invisible to shoppers, commitments to opening values for transactions. However, to handle multiple purchase orders for the same product, he would have to provide many commitments up front for each potential buyer. We can only imagine how messy that could become. This is part of the utility brought by our single-commitment signing simplification.}
+        \item {\em O comprador adiciona um produto ao cesto}: O utilizador decide que quer fazer uma compra, primeiro selecciona a opção de pagamento, se ele selecciona uma multi-assinatura 2-de-3, então são apresentados os moderadores disponíveis dos quais ela pode escolher um. Quando o utilizador adiciona o produto ao seu cesto de compras, o seu cliente usa a chave base do produto, a chave base do moderador e a chave pública do segredo partilhado entre o vendedor e o moderador, para, em combinação com a sua própria chave de gasto (como a sua chave base), construír um endereço multi-assinatura 2-de-3 entre comprador, vendedor e moderador. Note-se que o utilizador possui um sub-endereço para a sessão de compras.
+\footnote{Está aberto á interpretação exactamente como um mercado online deve ser implementado. Por exemplo o tipo de pagamento pode ser apresentado ao comprador no fim, ou quando ele adiciona o produto `ao cesto'.}
+%Exactly how a marketplace should be implemented is open to interpretation, since for example selecting the payment type for a product could be presented to the user at checkout instead of in the `add to cart' interface.}\\
+A chave de ver é uma hash da chave privada do segredo partilhado entre o comprador e o vendedor. E a chave de encriptação das comunicações entre o comprador e o vendedor, é uma hash da chave de ver\footnote{Este mesmo processo aconteceria para uma multi-assinatura 1-de-2, o que exclui a necessidade de um moderador.}. 
+        \item {\em O comprador vai para o checkout}: 
+Antes de finalizar a ordem de compra, os fundos têm de ser disponibilizados. O cliente constrõe uma transacção (mas ainda não a assina), que irá pagar o vendedor directamente, ou depositar os fundos num endereço de multi-assinatura (com um pouco mais para taxas futuras). Se for feito um depósito para um endereço de multi-assinatura 2-de-3, o cliente também inicia duas transacções que enviam dinheiro para fora desse endereço. Uma pode ser usada para pagar ao vendedor, e a outra para reembolsar o comprador.  É importante iniciar transacções separadas pois os valores de abertura comprometidos só podem ser usados uma vez. As imagens de chave parciais das entradas dependem da transacção de depósito que ainda não foi assinada.      
+Ele só precisa de valores de abertura comprometidos para duas transacções, e depois separadamente uma cópia das imagens de chave parciais (com prova de legitimidade) e uma cópia do seu sub-endereço para a sessão de compras. Esse sub-endereço tem dois propósitos; é o endereço do comprador para fins de reembolso e de troco, e a sua chave de gasto é a chave base de multi-assinatura. 
+        \item {\em O comprador autoriza o pagamento}: Depois de verificar todos os detalhes da ordem de compra, o comprador autoriza o pagamento. O cliente assina a transacção de depósito, e submete isso á rede, o destinatário é o vendedor.
+\footnote{Se o comprador cancela a ordem de compra, a transacção financiadora e as multi-assinaturas parciais são apagadas.}
+%If the buyer cancels the purchase order, her funding transaction and partial multisig transactions get deleted.} 
+\footnote{Se o cesto de compras contêm produtos de múltiplos vendedores, então o software cliente pode criar múltiplas ordens de compra e executá-las separadamente. Os vendedores podem todos ser pagos pela mesma transacção.}
+%If her cart contained multiple vendors' products, then her client can create multiple purchase orders and handle them separately. The vendors can all be paid by the same funding transaction.}
+A transacção contêm a ordem de compra, a hash da transacção de depósito, as transacções iniciadas de multi-assinatura, e a chave pública do segredo partilhado entre o comprador e o moderador.
+\footnote{O software do comprador deve acompanhar os detalhes das ordens de compra, como o preço total, para que mais tarde o conteúdo das transacções de multi-assinatura seja verificado antes de assinar.}   
+\fi
+\iffalse
+%The buyer's client should keep track of payment order details like total price, to later verify the content of multisig transactions before signing them.}
+    \end{enumerate}{}
+    \item {\em O vendedor realiza a ordem de compra}
+    \begin{enumerate}
+        \item {\em O vendedor avalia a ordem de compra}: O vendedor examina a ordem de compra, e depois aprova-a para envio. Se ele foi pago directamente então não existe mais algo a considerar. Se ele foi pago através de uma multi-assinatura 1-de-2, então ele pode enviar uma transacção a sí próprio. No caso de uma multi-assinatura 2-de-3, o seu cliente gera um sub-endereço para receber o dinheiro da ordem de compra. Adicionalmente ele completa as duas transacções parciais que foram inicializadas pelo comprador. A transacção de pagamento envia o preço do produto ao vendedor, e o resto ao comprador como troco. A transacção de reembolso esvazia os fundos do endereço de multi-assinatura 2-de-3 de volta ao comprador.
+%??? esvazia os fundos do endereço ? para onde ?      
+\footnote{As transacções parciais podem conter uma série de valores pois estes involvem as mesmas entradas, e só uma delas é que no fim é assinada. Para ser modular e robusto pensa-se que é melhor lidar com elas separadamente.} 
+%??? lidar com o que ?
+%The partial transactions could plausibly share a lot of values since they involve the same inputs, and only one of them should ultimately get signed. For the sake of modularity and robust design we think it's best to handle them separately.} 
+Note that he reconstructs the multisig address out of the buyer-vendor-moderator base keys in combination with the buyer-moderator shared secret public key.
+        \item {\em O vendedor envia o produto}: O vendedor envia o produto, e envia uma notificação ao comprador. Essa notificação contêm um recibo da compra, como também um requisito para que o utilizador complete o pagamento. Daqui em diante só se trata  da multi-assinatura 2-de-3.    
+    \end{enumerate}{}
+    \item {\em O comprador completa o pagamento ou pede um reembolso}: O comprador pode fazer logo depois de receber a notificação. Ou depois do produto ser entregue.
+    \begin{enumerate}
+        \item {\em O comprador submete a transacção parcialmente assinada}: O comprador decide se faz o pagamento ou se pede reembolso. O seu software cliente cria uma assinatura parcial na respectiva transacção parcial, e envia isso ao vendedor. Qualquer reembolso contêm em princípio uma explicação que o justifique.
+        \item {\em O vendedor completa a transacção}: O vendedor recebe uma transacção parcialmente assinada, finaliza a assinatura e submete isso á rede. Se necessário ele envia uma notificação de reembolso, juntamente com uma prova, ao comprador. 
+    \end{enumerate}{}
+    \item {\em Disputa moderada}: Depois do comprador submeter a ordem de compra e antes do endereço de multi-assinatura ser esvaziado, o vendedor ou o comprador podem decidir envolver o moderador. O {\em partido\_A} é quem levantou a disputa, enquanto que o {\em partido\_B} é o réu. 
+\footnote{O nosso modelo de resolução de disputas assume que os actores são de boa fé. As pessoas que não cooperam, e que não iniciam ou assinam transacções que não lhes favorecem, irão sem dúvida tornar o processo muito mais tedioso para todos.} 
+%Our dispute resolution design assumes actors are in good faith. People who are uncooperative, and for example don't initiate or sign transactions that don't favor themselves, will no doubt make the process much more tedious for everyone.}
+    \begin{enumerate}
+        \item {\em O partido\_A contacta o moderador}: O partido\_A inicia duas transacções, para pagamento ou reembolso, desta vez para uma assinatura entre o partido\_A e o moderador. Isto é enviado para o moderador juntamente com informação necessária para construír um endereço de multi-assinatura (as chaves base, a chave pública do segredo partilhado entre o partido\_A e o partido\_B, e a chave privada de ver), e para ler o saldo da carteira de multi-assinatura (as imagens de chave parciais e as suas provas).     
+        \item {\em Passos de disputa do moderador}
+        \begin{enumerate}
+            \item {\em O moderador reconhece a disputa}: O moderador reconhece que ambos os partidos estão em disputa. Ao mesmo tempo usam-se as transacções inicializadas e destas fazem-se transacções parciais, estas são enviadas ao partido\_A. O partido\_B é informado acerca da disputa. Adicionalmente são inicializadas mais duas transacções com o partido\_B, para o caso em que o partido\_A é incapaz de cumprir com o veredito final.    
+            \item {\em Moderator pursues a verdict}: O moderador avalia os factos disponíveis, e pode interagir com ambos os partidos para obter mais informações. São feitas tentativas para resolver o problema sem que haja um veredito.  
+            \item {\em A disputa acaba}: O comprador ou o vendedor resolvem a disputa, por eles próprios no fim, ou então o moderador passa um veredito que é comunicado a ambos os partidos.
+        \end{enumerate}{}
+        \begin{itemize}
+            \item Nota : Se pelo veredito o réu deve receber os fundos, mas este não forneceu um endereço seja por que razão for, o moderador pode tentar contactá-los e cooperar com eles para que estes recebam os fundos. Desde que não involve o contestador, esse contacto pode ser feito (e continuado) depois da disputa ser resolvida.     
+        \end{itemize}{}
+        \item {\em O partido\_A ou o partido\_B aceitam o veredito}: Se não foram finalizadas transacções entre ambos os partidos, isso implica que a disputa foi resolvida pela decisão do moderador. 
+        \begin{enumerate}
+            \item {\em O partido\_A aceita}
+            \begin{enumerate}
+                \item O partido\_A completa a assinatura parcial na transacção veredita e envia isso ao moderador.  
+                \item O moderador completa a assinatura, e submete a transacção á rede.
+            \end{enumerate}{}
+            \item {\em O partido\_B aceita}
+            \begin{enumerate}
+                \item O partido\_B utiliza a transacção inicializada do veredito do moderador e cria uma transacção parcial. Este passo pode ser feito antes que o veredito seja finalizado. Nesse caso o partido\_B faria duas transacções parciais para ambos os potenciais vereditos.    
+                \item O moderador assina parcialmente essa transacção parcial, e envia isso ao partido\_B.
+                \item O partido\_B finaliza a assinatura da transacção, e envia isso á rede. O partido\_B também envia a hash da transacção ao moderador.   
+            \end{enumerate}{}
+        \end{enumerate}{}
+        \item {\em O moderador acaba com a disputa} : O moderador faz um resumo da disputa e da sua resolução, e envia esse relatório ao vendedor e ao comprador.
+    \end{enumerate}{}
+\end{enumerate}{}
+
+\fi
+
+Existem quatro optimizações instaladas.
+
+\subsubsection*{moderadores pre-seleccionados}
+
+Ao escolher moderadores, vendedores podem criar um segredo partilhado com cada um deles, e para cada produto e publicar essa chave pública com a informação do produto. 
+%By choosing the moderators ahead of time, vendors can create a shared secret with each of them for each of their products and publish its public key with the product information.
+\footnote{Estes endereços de multi-assinatura ainda são resistentes a testes de agregação de chave, porque os segredos partilhados do comprador são desconhecidos aos observadores.}  
+%Importantly, these multisig addresses are still resistant to key aggregation tests since the buyer's shared secrets are unknown to observers.} 
+Desta forma os compradores podem construir um endereço junto de multi-assinatura num só passo, assim que decidam comprar algo. Os compradores podem optar entre vários moderadores, o que lhes permite escolher aquele em que mais confiam.  
+%This way buyers can construct the complete merged multisig address in one step, as soon as they decide to purchase something, harmonizing with the requirement for `offline selling'. Preselecting multiple moderators allows buyers to choose the one they trust more.
+
+Os compradores podem também, se não confiam nos moderadores aceites pelo vendedor, escolher e cooperar com um outro moderador online para fazer um endereço de multi-assinatura com a chave base do produto em causa. Depois de receber a ordem de compra, o vendedor pode aceitar esse novo moderador ou rejeitar a venda. 
+%Buyers may also, if they don't trust a vendor's accepted moderators, cooperate with an online moderator of their choosing to make a multisig address with the vendor's product base key. After receiving a purchase order, the vendor may accept that new moderator or decline the sale.
+\footnote{Para uma experiência mais fluída, um servico de garantia poderia estar `sempre online', e em vez de ser usado um moderador pre-seleccionado, todos os endereços de multi-assinatura 2-de-3 são activamente construídos com esse serviço, quando uma ordem de compra é feita. Uma outra opção é utilizar multi-assinaturas inclusivas (secção \ref{sec:general-key-families}), em que o moderador pre-seleccionado é actualmente um grupo de multi-assinatura 1-de-N. Desta forma sempre que há uma disputa, qualquer moderador desse grupo, que está disponível nesse momento pode intervenir. Isto provávelmente requer um esforço substancial para implementar.}     
+%For expediency, an escrow service could be `always online', and instead of using preselected moderators all 2-of-3 multisig addresses are actively constructed with that service when a purchase order is made. Another possibility is using nested multisig (Section \ref{sec:general-key-families}), where the preselected moderator is actually a 1-of-N multisig group. That way whenever a dispute arises any moderator from that group who happens to be available can step in. It would likely require substantial development effort to implement.}
+
+Espera-se que a necessidade mútua que compradores e vendedores têm para utilizarem bons moderadores, gere ao longo do tempo uma hierarquia de moderadores organizados pela qualidade e justiça dos seus serviços. Moderadores com uma reputação menor irão receber menos dinheiro e servir para menos transacções e também de montantes mais baixos.  
+%We expect the mutual desire of buyers and vendors for good moderators to, over time, create a hierarchy of moderators organized by the quality and fairness of the service they provide. Lower quality moderators or those with less of a reputation would likely earn less money or service fewer or less significant transactions.
+\footnote{Nãe é claro qual será o melhor método de financiamento para os moderadores. Talvez eles recebem uma taxa fixa ou uma percentagem de cada transacção que moderam, ou então cada vez que são seleccionados como moderadores (e se a taxa não está presente na transacção original parcial, o moderador recusa a disputa). Ou então os utilizadores destes mercados com garantia estabelecem contratos com os moderadores.}  
+%It is not clear to us the best, or most likely, funding method for moderators. Perhaps they would get paid a flat or percentage fee of each moderated transaction or transaction where they are added as a moderator (and then if the fee wasn't provided in the original partial transactions, refuse to cooperate in a dispute), or users and/or vendors and/or marketplace platforms would contract with them.}
+
+\subsubsection*{Subendereços e ID's de produto}
+
+Vendedores criam uma nova chave base para cada ID de um produto, e essas chaves são usadas para construir endereços de multi-assinatura 2-de-3. 
+%Vendors create a new base key for each product line/ID, and those keys are used to construct 2-of-3 multisig addresses.
+\footnote{Esta chave base também é utilizada para comprar com multi-assinaturas 1-de-2. É importante não expor a chave privada de gasto no canal de comunicação, portanto usar um segredo partilhado entre o comprador e o vendedor, faz sentido.} 
+%This base key is also used for 1-of-2 multisig purchasing. We feel it is important not to expose the private spend key in the communication channel, so using a buyer-vendor shared secret makes a lot of sense.}
+Quando um vendedor serve uma ordem de compra, este cria um subendereço para receber os fundos, o que pode ser usado para ligar ordens de compra aos pagamentos recebidos. 
+%When vendors fulfill a purchase order they create a unique subaddress for receipt of funds, which can be used to match purchase orders with payments received.
+O requisito para `pagamentos baseados na ordem de compra' é satisfeito de forma efficaz, também porque fundos dirigidos a sub-endereços diferentes são trivialmente acessíveis da mesma carteira (secção \ref{sec:subaddresses}).
+%The requirement for `purchase order-based payments' is met efficiently here, especially since funds directed to different subaddresses are trivially accessible from the same wallet (recall Section \ref{sec:subaddresses}).
+
+\subsubsection*{Transacções parciais antecipadas}
+
+Transacções de multi-assinatura levam várias rondas, portanto estas são feitas assim que possível. Para a conveniência do utilizador, transacções parciais que só são usadas raramente (e.g. reembolsos) são feitas de forma antecipada. E assim estas estão disponíveis de imediato para assinar, quando for preciso.  
+%Multisig transactions take multiple rounds, so we begin making them as soon as possible. For user convenience, partial transactions that are only rarely used (e.g. refund transactions) get made early, so they are immediately available for signing if the need arises.
+
+\subsubsection*{Acesso condicional do moderador}
+
+Para a eficiência e privacidade, os moderadores só precisam de acesso aos detalhes de um negócio quando há a necessidade de resolver disputas. Para alcançar isto, a chave privada de ver de multi-assinatura, é uma hash da chave privada do segredo partilhado :
+\begin{align*}
+k^{v,grp}_{purchase-order} = \mathcal{H}_n(T_{mv},k^{sh,\textrm{2x3}}_{AB}) .
+\end{align*}    
+Em que $T_{mv}$ é a chave de ver que separa domínios no mercado, e A e B correspondem com o vendedor e comprador, e   
+\begin{align*}
+k^{sh,\textrm{2x3}}_{AB} = \mathcal{H}_n(k^{base}_{A}*k^{base}_{B} G) .
+\end{align*}
+
+Extende-se o que pode {\em ver} á transcrição de comunicação entre comprador e vendedor. Por outras palavras, a chave que encripta essa comunicação é :
+\begin{align*}
+k^{ce}_{ordem-de-compra} = \mathcal{H}_n(T_{me},k^{v,grp}_{ordem-de-compra}) ,
+\end{align*}
+e $T_{me}$ é a chave que encripta o separador de domínio do mercado . 
+%For the sake of both efficiency and privacy, moderators only need access to the details of a trade when settling disputes. To accomplish this, we make the multisig private view key a hash of the buyer-vendor shared secret private key $k^{v,grp}_{purchase-order} = \mathcal{H}_n(T_{mv},k^{sh,\textrm{2x3}}_{AB})$ where $T_{mv}$ is the marketplace view key domain separator and A and B correspond with vendor and buyer, and $k^{sh,\textrm{2x3}}_{AB} = \mathcal{H}_n(k^{base}_{A}*k^{base}_{B} G)$. We extend what it can `view' to the buyer-vendor communication transcript. In other words, the communication encryption key is $k^{ce}_{purchase-order} = \mathcal{H}_n(T_{me},k^{v,grp}_{purchase-order})$ ($T_{me}$ is the marketplace encryption key domain separator).
+%??? shared secret private key ? (this was choosen)The private key of a shared secret? 
+%??? Or is it a secret private key wich is shared?
+%??? marketplace view key domain separator ?
+%??? $T_{me}$ is the marketplace encryption key domain separator ?
+\footnote{Separar a chave de ver e a chave de encriptação permite oferecer direitos de ver ao histórico de comunicações sem dar direitos de ver ao histórico de transacções do endereço de multi-assinaturas.}   
+%Separating the view key and encryption key allows handing out just view rights to the communication log without view rights to the multisig address's transaction history.}
+\footnote{Este método também é utilizado para endereços de multi-assinatura 1-de-2.}
+%This method is also used for 1-of-2 multisig addresses.}
+Os moderadores ganham acesso á comunicação entre o comprador e o vendedor, e a abilidade de autorizar pagamentos, só quando um dos partidos lhes liberta a chave de ver. 
+%Moderators gain access to the buyer-vendor communications, and the ability to authorize payments, only when one of the original parties releases the view key to them.
+\footnote{É importante que os moderadores verifiquem que o histórico de comunicação que eles recebem não foi falsificado. Uma forma seria que cada co-signatário incluísse uma hash assinada da mensagem com o histórico, sempre que este é enviado para fora. Os moderadores podem olhar para esta comunicação, com as hashes dos históricos para identificar discrepâncias. Também ajudaria aos co-signatários identificar mensagens que falharam na transmissão, e alternativamente criar a evidência que certos co-signatários receberam de facto certas mensagens.}    
+%It is important for moderators to verify the communication log they receive hasn't been tampered with. One way might be for each cosigner to include a signed hash of the current message log whenever they send out a new message. Moderators can look at the back-and-forth, and series of hashed logs, to identify discrepancies. It would also help cosigners identify messages that failed to transmit, and alternatively create evidence that particular signers did in fact receive certain messages.}
+
+Para mais, vendedores podem verificar que o anfitrião do mercado online (que pode também ser o único moderador disponível, dependendo da forma como isto é implementado) não é MITM (`homem no meio') das suas comunicações com os clientes. Os vendedores verificam que as chaves base que eles publicam para cada produto é igual aquele que é mostrado publicamente no mercado. Como a chave base do comprador, que é usada para criar o endereço de multi-assinatura, também é parte da chave de encriptação, um anfitrião malicioso não consegue orquestrar um ataque MITM (enp).
