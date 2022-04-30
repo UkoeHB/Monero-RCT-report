@@ -10,6 +10,7 @@ Browsers with built-in PDF readers (e.g. recent versions of Firefox) can display
 
 - English: [PDF link](https://raw.githubusercontent.com/UkoeHB/Monero-RCT-report/master/Zero-to-Monero-2-0-0.pdf)
 - Russian: [PDF link](https://raw.githubusercontent.com/UkoeHB/Monero-RCT-report/master/Zero-to-Monero-2-0-0-ru.pdf)
+- Portuguese: [PDF link](https://raw.githubusercontent.com/UkoeHB/Monero-RCT-report/master/Zero-to-Monero-2-0-0-pt.pdf)
 
 
 
@@ -32,15 +33,6 @@ ZtM is written in LaTeX, so it is not easily integrated with translation service
 3. Edit those files as you see fit. A service like Overleaf can let you build the document, just make a new Overleaf project -> 'upload project' and select the folder containing all the source files (e.g. clone the Github repo and open your_language_folder in Overleaf). A lot of math and formatting is imbedded in text, so be careful with what you change. Rebuilding with Overleaf lets you see the effect of changes on typesetting and so on.
 4. Once you are done editing a file, make a pull request on the translation repo with your changes. Easiest may be to open the relevant file, 'edit' it, and paste in the contents of your personal file containing changes.
 5. After the document is done being translated, either make a pull request on my repository here, or let me know and I will pull it in.
-
-Completed translations:
-
-- English (original)
-- Russian
-
-Current translations in progress:
-
-- (none that I know)
 
 
 
