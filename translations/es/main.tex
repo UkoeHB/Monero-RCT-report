@@ -1,0 +1,256 @@
+\documentclass[usletter,11pt,english,oneside,onecolumn,final,openany]{report}
+
+%Primary packages
+\usepackage{fancyvrb}
+
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage[pdftex]{graphicx}
+
+
+% Useful packages:
+
+% Advanced mathematical formulas and symbols
+% -------------------------------------
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsfonts}
+\usepackage{bm}
+
+% Footnotes
+% -------------------------------------
+\usepackage[stable,splitrule]{footmisc}
+
+% Color management package
+% -------------------------------------
+\usepackage[usenames,dvipsnames]{xcolor}
+
+% Control line spacing 
+% -------------------------------------
+% putting this between footmisc and hyperref seemed to fix broken footnote links
+\usepackage{setspace}
+\AtBeginDocument{\let~=\nobreakspace}
+\spacing{1.1}
+
+% Advanced crossreferencing commands 
+% -------------------------------------
+% Default settings:
+% \usepackage[]{hyperref}
+% Disable link coloring:
+% \usepackage[colorlinks=false]{hyperref}
+% Enable link coloring with personalized colors, make page number (not text) be link on the Table Of Contents (needs color package)
+\usepackage[colorlinks=true, linkcolor=BlueViolet, citecolor=BlueViolet, urlcolor=BlueViolet,linktocpage=true]{hyperref}
+
+%% more footnote stuff
+\usepackage{footnotebackref}
+
+\let\oldFootnote\footnote
+\newcommand\nextToken\relax
+
+\renewcommand\footnote[1]{%
+    \oldFootnote{#1}\futurelet\nextToken\isFootnote}
+
+\newcommand\isFootnote{%
+    \ifx\footnote\nextToken\textsuperscript{,}\fi}
+
+
+% Flexible interface to page dimensions
+% -------------------------------------
+% Default settings:
+% \usepackage[]{geometry}
+% Set specific margins:
+\usepackage{marginnote}
+\usepackage[outer=2.62cm,inner=2.62cm,top=3cm,bottom=2.75cm, marginparwidth=2.1cm, marginparsep=.35cm]{geometry}
+
+
+%Tree drawing
+\usepackage{tikz}
+\usetikzlibrary{trees, arrows}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.15}
+
+\usepackage[edges,linguistics]{forest}
+
+
+% Tabular package extensions
+% -------------------------------------
+% \usepackage{array}
+% \usepackage{multirow}
+
+% Modify chapter level headings
+% -------------------------------------
+\usepackage[Sonny]{fncychap}
+\usepackage{fancyhdr}
+\fancyhead{}
+\fancyfoot{}
+\rhead[\small \leftmark]{\small \thepage}
+\lhead[\small \thepage]{\small \leftmark}
+\setlength{\headheight}{13.2pt}
+
+\ChRuleWidth{1pt}
+\ChNameAsIs
+\ChNameUpperCase
+\ChNameVar{\Large\bf}
+\ChNumVar{\Huge} 
+\ChTitleVar{\LARGE}
+
+% Modify appendix and add subappendices environments
+% -------------------------------------
+\usepackage{appendix}
+
+% Paragraph indentation and skip
+% -------------------------------------
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{1.7ex plus 0.5ex minus 0.8ex}
+
+\usepackage{xspace}
+\newcommand\nd{\textsuperscript{nd}\xspace}
+\newcommand\rd{\textsuperscript{rd}\xspace}
+\newcommand\rds{\textsuperscript{rds}\xspace}
+\newcommand\nth{\textsuperscript{th}\xspace}
+\newcommand\nths{\textsuperscript{ths}\xspace}
+
+% List spacing
+\usepackage{enumitem}
+\setlist[itemize]{topsep=0pt}
+\newcommand{\listspace}{-.4em}
+
+% Separate document into parts
+\usepackage{titlesec}
+
+% Line numbering for drafts only
+%\usepackage[pagewise,modulo,displaymath,mathlines]{lineno}
+%\linenumbers
+
+% ___________________________________________________________________________________________________________
+%
+%                  		PDF INFO
+% ___________________________________________________________________________________________________________
+
+
+
+
+\hypersetup{
+    pdftitle = {Zero to Monero - Second Edition},
+    pdfauthor = {koe Kurt and Sarang}
+}
+
+
+
+\begin{document}
+%\maketitle 
+% ------ Title page ------------------------
+\setlength{\abovedisplayskip}{0pt}
+\setlength{\belowdisplayskip}{0pt}
+\setlength{\abovedisplayshortskip}{0pt}
+\setlength{\belowdisplayshortskip}{0pt}
+
+
+\pagenumbering{roman}
+\pagestyle{plain}
+\thispagestyle{empty}
+
+\mbox{}
+\vspace{1cm}
+
+\begin{center}
+  \includegraphics[width=3cm]{front/figures/monero-symbol-1280.png}
+\end{center}
+
+
+\vfill{}
+{\par\centering \textsc{\huge Zero to Monero: Second Edition}\par}
+\bigskip \bigskip
+{\par\centering \textsc{\LARGE a technical guide to a private digital currency; for beginners, amateurs, and experts}\par}
+\bigskip
+{\par\centering \textsc{\LARGE Published \today{} (v2.0.0)}\par}
+%{\par\centering \textsc{\LARGE \today{}, Pre-Publication Draft 1.2.0}\par}
+\bigskip
+{\par\centering \textsc{\large koe\footnote{ukoe@protonmail.com}, Kurt M. Alonso\footnote{kurt@oktav.se}, Sarang Noether\footnote{sarang.noether@protonmail.com}}%\\(for questions and comments, please CC both authors)
+\par}
+\vfill{}
+
+\begin{center}
+  \begin{minipage}[t]{6.43in}
+
+%\textbf{DRAFT INFORMATION}: This is just a draft, and may not always be available wherever it is currently hosted. The final version will be published at \url{https://web.getmonero.org/library/}.
+\textbf{License}: Zero to Monero: Second Edition is released into the public domain.
+
+  \end{minipage}
+\end{center}
+\vspace{0cm}
+% ------ Abstract ------------------------
+
+\newpage
+\pagestyle{empty}
+\begin{center}
+\vspace*{\fill}%\vspace*{3.5cm}
+{\LARGE \bfseries  Abstract}
+\end{center}
+\vspace{0.5cm}
+\begin{center} 
+\begin{minipage}{5.5in}
+\begin{center} \vrule width 4.5in height 0.4pt \end{center} 
+\parindent=0pt 
+\include{front/abstract}
+\begin{center} \vrule width 4.5in height 0.4pt \end{center} 
+\end{minipage} 
+\vspace*{\fill}
+\end{center}
+
+% ------ Table of contents and figures ---------
+\newpage
+\pagestyle{plain}
+\tableofcontents
+
+% ___________________________________________________________________________________________________________
+%
+%             			CONTENT
+% ___________________________________________________________________________________________________________
+
+\newpage
+\pagenumbering{arabic}
+\pagestyle{fancy}
+
+% -------- Chapters ----------------------------
+
+\include{content/introduction}
+
+\part{Essentials}
+\include{content/basicConcepts}
+\include{content/advancedSchnorr}
+\include{content/addresses}
+\include{content/commitments}
+\include{content/transactions}
+\include{content/blockchain}
+
+\part{Extensions}
+\include{content/txKnowledgeProofs}
+\include{content/multisig}
+\include{content/escrowedMarket}
+\include{content/txTangle}
+
+% ___________________________________________________________________________________________________________
+%
+%				BACKMATTER
+% ___________________________________________________________________________________________________________
+
+% -------- Bibliography -----------------------
+
+\addcontentsline{toc}{chapter}{Bibliography}
+{\footnotesize
+\bibliographystyle{plain}
+\bibliography{back/references.bib}
+}
+
+% -------- Appendix ---------------------------
+
+\addappheadtotoc
+\appendixpage
+\include{content/appendix}
+
+% -------- Last page -------------------------
+
+
+
+\end{document}
