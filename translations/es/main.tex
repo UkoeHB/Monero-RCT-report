@@ -25,14 +25,14 @@
 % -------------------------------------
 \usepackage[usenames,dvipsnames]{xcolor}
 
-% Control line spacing 
+% Control line spacing
 % -------------------------------------
 % putting this between footmisc and hyperref seemed to fix broken footnote links
 \usepackage{setspace}
 \AtBeginDocument{\let~=\nobreakspace}
 \spacing{1.1}
 
-% Advanced crossreferencing commands 
+% Advanced crossreferencing commands
 % -------------------------------------
 % Default settings:
 % \usepackage[]{hyperref}
@@ -91,7 +91,7 @@
 \ChNameAsIs
 \ChNameUpperCase
 \ChNameVar{\Large\bf}
-\ChNumVar{\Huge} 
+\ChNumVar{\Huge}
 \ChTitleVar{\LARGE}
 
 % Modify appendix and add subappendices environments
@@ -131,14 +131,14 @@
 
 
 \hypersetup{
-    pdftitle = {Zero to Monero - Second Edition},
-    pdfauthor = {koe Kurt and Sarang}
+    pdftitle = {De cero a Monero - Segunda Edición},
+    pdfauthor = {koe, Kurt y Sarang}
 }
 
 
 
 \begin{document}
-%\maketitle 
+%\maketitle
 % ------ Title page ------------------------
 \setlength{\abovedisplayskip}{0pt}
 \setlength{\belowdisplayskip}{0pt}
@@ -159,14 +159,15 @@
 
 
 \vfill{}
-{\par\centering \textsc{\huge Zero to Monero: Second Edition}\par}
+{\par\centering \textsc{\huge De cero a Monero: segunda edición}\par}
 \bigskip \bigskip
-{\par\centering \textsc{\LARGE a technical guide to a private digital currency; for beginners, amateurs, and experts}\par}
+{\par\centering \textsc{\LARGE Una guía técnica para una moneda digital privada; para principiantes, aficionados y especialistas.}\par}
 \bigskip
-{\par\centering \textsc{\LARGE Published \today{} (v2.0.0)}\par}
-%{\par\centering \textsc{\LARGE \today{}, Pre-Publication Draft 1.2.0}\par}
+{\par\centering \textsc{\LARGE Publicado el \today{} (v. 2.0.0)}\par}
 \bigskip
-{\par\centering \textsc{\large koe\footnote{ukoe@protonmail.com}, Kurt M. Alonso\footnote{kurt@oktav.se}, Sarang Noether\footnote{sarang.noether@protonmail.com}}%\\(for questions and comments, please CC both authors)
+{\par\centering \textsc{\large koe\footnote{ukoe@protonmail.com}, Kurt M. Alonso\footnote{kurt@oktav.se}, Sarang Noether\footnote{sarang.noether@protonmail.com}}
+{\par\centering \textsc{\large Traducido por Jorge Maldonado Ventura \footnote{jorgesumle@freakspot.net}}\par}
+%\\(for questions and comments, please CC both authors)
 \par}
 \vfill{}
 
@@ -174,7 +175,7 @@
   \begin{minipage}[t]{6.43in}
 
 %\textbf{DRAFT INFORMATION}: This is just a draft, and may not always be available wherever it is currently hosted. The final version will be published at \url{https://web.getmonero.org/library/}.
-\textbf{License}: Zero to Monero: Second Edition is released into the public domain.
+  \textbf{Licencia}: \textit{De cero a Monero: segunda edición} está publicado en dominio público.
 
   \end{minipage}
 \end{center}
@@ -185,16 +186,16 @@
 \pagestyle{empty}
 \begin{center}
 \vspace*{\fill}%\vspace*{3.5cm}
-{\LARGE \bfseries  Abstract}
+{\LARGE \bfseries  Resumen}
 \end{center}
 \vspace{0.5cm}
-\begin{center} 
+\begin{center}
 \begin{minipage}{5.5in}
-\begin{center} \vrule width 4.5in height 0.4pt \end{center} 
-\parindent=0pt 
+\begin{center} \vrule width 4.5in height 0.4pt \end{center}
+\parindent=0pt
 \include{front/abstract}
-\begin{center} \vrule width 4.5in height 0.4pt \end{center} 
-\end{minipage} 
+\begin{center} \vrule width 4.5in height 0.4pt \end{center}
+\end{minipage}
 \vspace*{\fill}
 \end{center}
 
@@ -216,7 +217,7 @@
 
 \include{content/introduction}
 
-\part{Essentials}
+\part{Fundamentos}
 \include{content/basicConcepts}
 \include{content/advancedSchnorr}
 \include{content/addresses}
@@ -224,7 +225,7 @@
 \include{content/transactions}
 \include{content/blockchain}
 
-\part{Extensions}
+\part{Extensiones}
 \include{content/txKnowledgeProofs}
 \include{content/multisig}
 \include{content/escrowedMarket}
@@ -237,7 +238,7 @@
 
 % -------- Bibliography -----------------------
 
-\addcontentsline{toc}{chapter}{Bibliography}
+\addcontentsline{toc}{chapter}{Bibliografía}
 {\footnotesize
 \bibliographystyle{plain}
 \bibliography{back/references.bib}
