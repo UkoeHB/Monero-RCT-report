@@ -426,7 +426,7 @@ Neste apêndice explica-se a notação dentro de bulletproofs. Existem pois duas
 
 sobre os pontos de CE : \newline
 $a\underline{B} = \{a B_1, a B_2, a B_3, ...,a B_n\}$\newline
-em que a operação $\circ$ não é relevante (hadamard).\newline
+$\underline{a}\circ\underline{B} = \{a_1 B_1, a_2 B_2, a_3 B_3, ...,a_n B_n\}$\newline
 $\langle\underline{a}, \underline{B}\rangle = \sum_{j=1}^{n} a_j B_j$\newline
 existem optimizações específicas para o seguinte : \newline
 $\langle\underline{a}, \underline{B}\rangle + \langle\underline{b}, \underline{C}\rangle + \langle\underline{c}, \underline{D}\rangle . . . $\newline
@@ -439,6 +439,7 @@ $\underline{a}^n = \{a^0, a^1, a^2, ...a^{n-1}\}$\newline
 $\underline{a}\circ\underline{b} = \{a_1 b_1, a_2 b_2, a_3 b_3, ...,a_n b_n\}$\newline
 $\langle\underline{a}, \underline{b}\rangle = \sum_{j=1}^{n} a_j b_j$\newline
 $\langle\underline{a}, \underline{b}\rangle = \langle \underline{1}, \underline{a}\circ\underline{b}\rangle$\newline
+$\langle\underline{a}, \underline{b}\circ\underline{c}\rangle = \langle\underline{a}\circ\underline{c}, \underline{b}\rangle$\newline
 $\langle\underline{a}, \underline{b}\rangle + \langle \underline{a}, \underline{c}\rangle = \langle \underline{a}, \underline{b} + \underline{c}\rangle$\newline
 
 para extraír $\delta(y, z)$ de :

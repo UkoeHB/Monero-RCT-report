@@ -311,8 +311,8 @@ agora passa-se $\Psi_g$, $\beta_0$, $\beta_1$ e $\lambda$ para o verificador.
 \end{align*}
 
 Note-se que $\Psi_g$ é igual a $\Psi_c$ e como tal a prova é válida.\newline
-Em que $r()$ é um escalar aleatório no corpo finito $F_p$. E $H_s(\alpha G)$ é um certo escalar aleatório, que resulta do argumento dado á função {\em hash} $H_s(\alpha G)$ (aqui $\alpha G$, $H_s$ aceita qualquer tipo de dados como argumento).   
-O operador binário * é uma multiplicação entre dois escalares no corpo finito $F_p$. E $\alpha G$ por exemplo é adicionar o ponto de CE $G$, consigo próprio $\alpha$ vezes.  
+Em que $r()$ é um escalar aleatório no corpo finito $\mathbb{F}_l$. E $H_s(\alpha G)$ é um certo escalar aleatório, que resulta do argumento dado á função {\em hash} $H_s(\alpha G)$ (aqui $\alpha G$, $H_s$ aceita qualquer tipo de dados como argumento).   
+O operador binário * é uma multiplicação entre dois escalares no corpo finito $\mathbb{F}_l$. E $\alpha G$ por exemplo é adicionar o ponto de CE $G$, consigo próprio $\alpha$ vezes.  
 \newpage
 Seja que $b_i$ = 1, então o caso base é:
 \begin{align*}
@@ -368,13 +368,13 @@ A alice sabe portanto que :
 \newline
 e tem a certeza que b é um vector de 64 bits, ou seja que o montante está dentro do domínio de 0 a $2^{64} -1$. Estas provas constituem uma assinatura em anel, mas não se trata própriamente de um anel, não é um processo circular. Para mais veja-se \cite{DangerousFreedom1984} .\footnote{No código em {\em python}, evita-se enviar $\lambda$, e usa-se $\Psi_g$ como parámetro para a verificação final, bem como variável supostamente aleatória! Ou seja $\Psi_g$ é utilizado para calcular $\Psi_c$ (através de bbs0 e bbs1) como resultado final... O que não deixa de ser elegante! }
 \newline\newline\newline
-É aparente que $2^i$ pode ser qualquer $k_i>0 \in F_p$.
+É aparente que $2^i$ pode ser qualquer $k_i>0 \in \mathbb{F}_l$.
 Seja que :
 \vspace{.175cm}
 \[b = \sum_{i=1}^{m} b_i k_i \]
 \vspace{.175cm}
 \newline
-Os termos de $2^i$ são conhecidos pelo verificador de antemão, como tal não são transmitidos pelo provador. Se fosse $k_i$ em vez de $2^i$, o provador teria de enviar mais $m$ escalares em $F_p$. pois então o constrangimento passaria a ser :
+Os termos de $2^i$ são conhecidos pelo verificador de antemão, como tal não são transmitidos pelo provador. Se fosse $k_i$ em vez de $2^i$, o provador teria de enviar mais $m$ escalares em $\mathbb{F}_l$. pois então o constrangimento passaria a ser :
 
 Se cada $C_i$ é :
 
@@ -479,7 +479,7 @@ ou seja :
 z^2 v + \delta(y,z) = \langle \underline{l}_0, \underline{r}_0 \rangle = t_0
 \end{align*}
 
-e também os factores obfuscantes : \newline
+e também os factores ofuscantes : \newline
 $\underline{l}_1 = \underline{\dot{s}}_L\\
 \underline{r}_1 = \underline{y}^n \circ \underline{\dot{s}}_R$
 
@@ -625,7 +625,7 @@ $P_k = \langle \underline{l}_k(x),\underline{G}_k\rangle + \langle \underline{r}
 
 Aqui $isto^{\rightarrow}$ significa do início do vector até metade, e $isto^{\leftarrow}$ significa do fim do vector até metade.
 
-Enquanto $k>1$\newline
+Enquanto $n>1$\quad\quad\quad(começa-se com $k=6$)\newline
 $L_k = \langle \underline{l}^{\rightarrow}_{k}(x),\underline{G}^{\leftarrow}_{k}\rangle + \langle \underline{r}^{\leftarrow}_{k}(x),\underline{H'}^{\rightarrow}_{k}\rangle + \langle \underline{l}^{\rightarrow}_{k}(x), \underline{r}^{\leftarrow}_{k}(x)\rangle U$
 
 $R_k = \langle \underline{l}^{\leftarrow}_{k}(x),\underline{G}^{\rightarrow}_{k}\rangle + \langle \underline{r}^{\rightarrow}_{k}(x),\underline{H'}^{\leftarrow}_{k}\rangle + \langle \underline{l}^{\leftarrow}_{k}(x), \underline{r}^{\rightarrow}_{k}(x)\rangle U$
@@ -640,11 +640,11 @@ $u_{k}\leftarrow \ce{^{15}_{\ }\bot_C()}$\newline
 \underline{G}_{k-1} = u^{-1}_{k} \underline{G}_{k}^{\rightarrow} + u_{k} \underline{G}_{k}^{\leftarrow}\\
 \underline{H'}_{k-1} = u_{k} \underline{H'}_{k}^{\rightarrow} + u^{-1}_{k} \underline{H'}_{k}^{\leftarrow}\\
 \end{align*}
-$k=k/2$
+$n=n/2$
 
-se $k=1$ devolve-se $a$ e $b$.
+se $n=1$ devolve-se $a$ e $b$.
 
-Em que o 13 em $\ce{^{13}_{\ }\bot_U()}$ marca só a primeira ronda. O verificador não se irá perder, e no passo n° 13 do seu traslado, irá colher o mesmo. Passamos agora á magia em volta de $P_k$. Primeiro é notável como os $u_{j}$'s podem ser quaisquer valores em $F_p$. Para chegar a $P_k$, começa-se a partir de  $P_{k-1}$:\newline  
+Em que o 13 em $\ce{^{13}_{\ }\bot_U()}$ marca só a primeira ronda. O verificador não se irá perder, e no passo n° 13 do seu traslado, irá colher o mesmo. Passamos agora á magia em volta de $P_k$. Primeiro é notável como os $u_{j}$'s podem ser quaisquer valores em $\mathbb{F}_l$. Para chegar a $P_k$, começa-se a partir de  $P_{k-1}$:\newline  
 $
 P_{k-1} = \langle \underline{l}_{k-1}(x),\underline{G}_{k-1}\rangle + \langle \underline{r}_{k-1}(x),\underline{H'}_{k-1}\rangle + \langle \underline{l}_{k-1}(x), \underline{r}_{k-1}(x)\rangle U
 $
@@ -787,12 +787,12 @@ x\leftarrow \ce{^{8}_{\ }\bot_C()} \newline
 x_{ip}\leftarrow \ce{^{12}_{\ }\bot_C()} \newline
 $
 
-$i=1$\newline
-enquanto $i < 7$\newline
-$\hspace*{\fill}\ce{^{13}_{\ }\bot_U(L_i)}$ \newline
-$\hspace*{\fill}\ce{^{14}_{\ }\bot_U(R_i)}$ \newline
+$k=6$\newline
+enquanto $k \geq 1$\newline
+$\hspace*{\fill}\ce{^{13}_{\ }\bot_U(L_k)}$ \newline
+$\hspace*{\fill}\ce{^{14}_{\ }\bot_U(R_k)}$ \newline
 $u\leftarrow \ce{^{15}_{\ }\bot_C()}$ \newline
-$i=i+1$
+$k=k-1$
 
 Agora o verificador está armado com tudo o que precisa para fazer a verificação final. Voltamos então á equação (5.1) e simplificamos:\newline
 
@@ -838,9 +838,10 @@ $
 \\+ \langle z\underline{y}^n + z^2\underline{2}^n - b\underline{\varphi},\underline{H'}\rangle \\+ \langle -z\underline{1} - a\underline{\phi},\underline{G}\rangle 
 \\+ \sum_{j=1}^{k} u_{j}^{2}L_k + u_{j}^{-2}R_k
 \end{align*}
-$
-\newline
-$
+
+Como os escalares usados para multiplicar os pontos de CE estão em $\mathbb{F}_l$ : \newline
+Existe para cada $1 \leq y \leq l$ tal que $y H = H'$ também um $1/y$ (aqui $y^{-1}$) tal que $(1/y) H' = H$ .\newline
+
 \begin{align*}
 (0, 1) =
 z^2 V + (-\tau_x - \mu) G + x T_1 + x^2 T_2 + A + x S
