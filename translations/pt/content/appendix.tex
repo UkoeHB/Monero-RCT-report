@@ -418,4 +418,66 @@ o campo {\tt extra} da transacção de mineiro, só contêm uma chave pública d
 %There are no signatures in the genesis block. This is here as an artifact of the {\tt print\_block} function. The same is true for {\tt tx\_hashes} in linha 39.
 \end{itemize}
 
+\chapter{Uma nota sobre notações}
+%Genesis Block}
+\label{appendix:nota}
+
+Neste apêndice explica-se a notação dentro de bulletproofs. Existem pois duas operações básicas $a+b=c$ é sobre os escalares em $F_p$, e $A+B=C$ é sobre todos os pontos de CE disponíveis em ed25519.
+
+sobre os pontos de CE : \newline
+$a\underline{B} = \{a B_1, a B_2, a B_3, ...,a B_n\}$\newline
+em que a operação $\circ$ não é relevante (hadamard).\newline
+$\langle\underline{a}, \underline{B}\rangle = \sum_{j=1}^{n} a_j B_j$\newline
+existem optimizações específicas para o seguinte : \newline
+$\langle\underline{a}, \underline{B}\rangle + \langle\underline{b}, \underline{C}\rangle + \langle\underline{c}, \underline{D}\rangle . . . $\newline
+para mais informações sobre algoritmos de factorização sobre pontos de CE (Pippenger et al.) veja-se[].
+
+sobre os escalares : \newline
+$a\underline{b} = \{a b_1, a b_2, a b_3, ...,a b_n\} = a\underline{1}\circ \underline{b}$\newline
+$a\underline{1} = \underline{a}$\newline
+$\underline{a}^n = \{a^0, a^1, a^2, ...a^{n-1}\}$\newline
+$\underline{a}\circ\underline{b} = \{a_1 b_1, a_2 b_2, a_3 b_3, ...,a_n b_n\}$\newline
+$\langle\underline{a}, \underline{b}\rangle = \sum_{j=1}^{n} a_j b_j$\newline
+$\langle\underline{a}, \underline{b}\rangle = \langle \underline{1}, \underline{a}\circ\underline{b}\rangle$\newline
+$\langle\underline{a}, \underline{b}\rangle + \langle \underline{a}, \underline{c}\rangle = \langle \underline{a}, \underline{b} + \underline{c}\rangle$\newline
+
+para extraír $\delta(y, z)$ de :
+\begin{align*}
+vz^2 = \langle\underline{a}_L, \underline{2}^n\rangle z^2\\
+0z = \langle\underline{a}_L - \underline{1} - \underline{a}_R, \underline{y}^n\rangle z\\
+0 = \langle\underline{a}_L \circ \underline{a}_R, \underline{y}^n\rangle
+\end{align*}
+
+\begin{align*}
+vz^2 + 0 + 0 = \langle\underline{a}_L, \underline{2}^n\rangle z^2 + \langle\underline{a}_L - \underline{1} - \underline{a}_R, \underline{y}^n\rangle z + \langle\underline{a}_L \circ \underline{a}_R, \underline{y}^n\rangle
+\end{align*}
+
+\begin{align*}
+vz^2 = \langle\underline{a}_L, \underline{2}^n\rangle z^2 + \langle\underline{a}_L, \underline{y}^n\rangle z + \langle - \underline{1}, \underline{y}^n\rangle z + \langle - \underline{a}_R, \underline{y}^n\rangle z + \langle\underline{a}_L, \underline{a}_R  \circ \underline{y}^n\rangle
+\end{align*}
+
+\begin{align*}
+vz^2 + \langle \underline{1}, \underline{y}^n\rangle z = \langle\underline{a}_L, \underline{2}^n\rangle z^2 + \langle\underline{a}_L, \underline{y}^n\rangle z + \langle - \underline{1}, \underline{a}_R  \circ \underline{y}^n \rangle z + \langle\underline{a}_L, \underline{a}_R  \circ \underline{y}^n\rangle
+\end{align*}
+
+\begin{align*}
+vz^2 + \langle \underline{1}, \underline{y}^n\rangle z = \langle\underline{a}_L, \underline{2}^n z^2 + \underline{y}^n z + \underline{a}_R \circ \underline{y}^n \rangle + \langle - \underline{1}, \underline{a}_R  \circ \underline{y}^n \rangle z
+\end{align*}
+
+\begin{align*}
+vz^2 + \langle \underline{1}, \underline{y}^n\rangle z - \langle \underline{1}, \underline{2}^n z^2 + \underline{y}^n z \rangle z = \langle - \underline{1}, \underline{2}^n z^2 + \underline{y}^n z \rangle z\\ + \langle\underline{a}_L, \underline{2}^n z^2 + \underline{y}^n z + \underline{a}_R \circ \underline{y}^n \rangle\\ + \langle - \underline{1}, \underline{a}_R  \circ \underline{y}^n \rangle z
+\end{align*}
+
+\begin{align*}
+vz^2 + \langle \underline{1}, \underline{y}^n\rangle z - \langle \underline{1}, \underline{y}^n z \rangle z - \langle \underline{1}, \underline{2}^n z^2 \rangle z = \langle - z\underline{1}, \underline{2}^n z^2 + \underline{y}^n z + \underline{a}_R \circ \underline{y}^n \rangle\\ + \langle\underline{a}_L, \underline{2}^n z^2 + \underline{y}^n z + \underline{a}_R \circ \underline{y}^n \rangle\\
+\end{align*}
+
+\begin{align*}
+vz^2 + (z - z^2)\langle \underline{1}, \underline{y}^n \rangle - z^3 \langle \underline{1}, \underline{2}^n\rangle = \langle\underline{a}_L - z\underline{1}, \underline{2}^n z^2 + \underline{y}^n z + \underline{a}_R \circ \underline{y}^n \rangle
+\end{align*}
+
+\begin{align*}
+vz^2 + \underbrace{(z - z^2)\langle \underline{1}, \underline{y}^n \rangle - z^3 \langle \underline{1}, \underline{2}^n\rangle}_{\delta(y,z)} = \langle\underline{a}_L - z\underline{1}, \underline{y}^n \circ (\underline{1}z + \underline{a}_R) + \underline{2}^n z^2 \rangle
+\end{align*}
+
 \end{appendices}
