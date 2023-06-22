@@ -138,7 +138,7 @@ Say there are N people who each have a public key in the set $\mathbb{K}^{agg}$,
         \item and sends $C^{\alpha}_e$ to the other participants securely.
     \end{enumerate}
     \item Once all commitments $C^{\alpha}_e$ have been collected, each participant sends their $\alpha_e G$ to the other participants securely. They must verify that $C^{\alpha}_e \stackrel{?}{=} \mathcal{H}_n(T_{com},\alpha_e G)$ for all other participants.
-    \item Each participant computes 
+    \item Each participant computes
     \[ \alpha G = \sum_e \alpha_e G \]
     \item Each participant $e \in \{1,...,N\}$ does the following:\footnote{As in Section \ref{sec:schnorr-fiat-shamir}, it is important not to reuse $\alpha_e$ for different challenges $c$. This means to reset a multisignature process where responses have been sent out, it should start again from the beginning with new $\alpha_e$ values.}
     \begin{enumerate}
@@ -146,7 +146,7 @@ Say there are N people who each have a public key in the set $\mathbb{K}^{agg}$,
         \item defines their response component $r_e = \alpha_e - c* k^{agg}_e \pmod l$,
         \item and sends $r_e$ to the other participants securely.
     \end{enumerate}
-    \item Each participant computes 
+    \item Each participant computes
     \[ r = \sum_e r_e\]
     \item Any participant can publish the signature $\sigma(\mathfrak{m}) = (c,r)$.
 \end{enumerate}
@@ -190,17 +190,17 @@ Monero thresholded ring confidential transactions add some complexity because ML
 
 Recalling Section \ref{sec:multi_out_transactions}, a one-time address assigning ownership of a transaction's $t$\nth output to whoever has public address $(K^v_t,K^s_t)$ goes like this\vspace{.175cm}
 \begin{align*}
-  K_t^o &= \mathcal{H}_n(r K_t^v, t)G + K_t^s = (\mathcal{H}_n(r K_t^v, t) + k_t^s)G  \\ 
+  K_t^o &= \mathcal{H}_n(r K_t^v, t)G + K_t^s = (\mathcal{H}_n(r K_t^v, t) + k_t^s)G  \\
   k_t^o &= \mathcal{H}_n(r K_t^v, t) + k_t^s
-\end{align*} 
+\end{align*}
 
 We can update our notation for outputs received by a group address $(K^{v,grp}_t,K^{s,grp}_t)$:\vspace{.175cm}
 \begin{align*}
-  K^{o,grp}_t &= \mathcal{H}_n(r K^{v,grp}_t, t)G + K^{s,grp}_t  \\ 
+  K^{o,grp}_t &= \mathcal{H}_n(r K^{v,grp}_t, t)G + K^{s,grp}_t  \\
   k^{o,grp}_t &= \mathcal{H}_n(r K^{v,grp}_t, t) + k^{s,grp}_t
 \end{align*}
 
-Just as before, anyone with $k^{v,grp}_t$ and $K^{s,grp}_t$ can discover $K^{o,grp}_t$ is their address's owned output, and can decode the Diffie-Hellman term for output amount and reconstruct the corresponding commitment mask (Section \ref{sec:pedersen_monero}). 
+Just as before, anyone with $k^{v,grp}_t$ and $K^{s,grp}_t$ can discover $K^{o,grp}_t$ is their address's owned output, and can decode the Diffie-Hellman term for output amount and reconstruct the corresponding commitment mask (Section \ref{sec:pedersen_monero}).
 
 This also means multisig subaddresses are possible (Section \ref{sec:subaddresses}). Multisig transactions using funds received to a subaddress require some fairly straightforward modifications to the following algorithms, which we mention in footnotes.\footnote{Multisig subaddresses are supported in Monero.}
 
@@ -343,7 +343,7 @@ The proof is $(c,r^{resp})$ with $\tilde{K}^{o,grp}$.
 \end{enumerate}
 
 
-    
+
 \section{Smaller thresholds}
 \label{sec:smaller-thresholds}
 
@@ -413,7 +413,7 @@ Now let's say persons 1 and 2 want to sign a message $\mathfrak{m}$. We will use
         \item and sends $C^{\alpha}_{e}$ to the other participants securely.
     \end{enumerate}
     \item On receipt of all $C^{\alpha}_{e}$, each participant sends out $\alpha_e G$ and verifies the other commitments were legitimate.
-    \item Each participant computes 
+    \item Each participant computes
     \[\alpha G = \sum_e \alpha_e G\]
     \[c = \mathcal{H}_n(\mathfrak{m},[\alpha G])\]
     \item Participant 1 does the following:
@@ -426,7 +426,7 @@ Now let's say persons 1 and 2 want to sign a message $\mathfrak{m}$. We will use
         \item computes $r_2 = \alpha_2 - c*k^{agg,\textrm{2x3}}_{2,3}$,
         \item and sends $r_2$ to participant 1 securely.
     \end{enumerate}
-    \item Each participant computes 
+    \item Each participant computes
     \[r = \sum_e r_e\]
     \item Either participant can publish the signature $\sigma(\mathfrak{m}) = (c,r)$.
 \end{enumerate}
@@ -434,7 +434,7 @@ Now let's say persons 1 and 2 want to sign a message $\mathfrak{m}$. We will use
 The only change with sub-N threshold signatures is how to `close the loop' by defining $r_{\pi,e}$ (in the case of ring signatures, with secret index $\pi$). Each participant must include their shared secret corresponding to the `missing person', but since all the other shared secrets are doubled up there is a trick. Given the set $\mathbb{S}^{base}$ of all participants' original keys, only the {\em first person} - ordered by index in $\mathbb{S}^{base}$ - with the copy of a shared secret uses it to calculate his $r_{\pi,e}$.\footnote{In\marginnote{src/wallet/ wallet2.cpp {\tt transfer\_ selected\_ rct()}} practice this means an initiator should determine which subset of M signers will sign a given message. If he discovers O signers are willing to sign, with (O $\geq$ M), he can orchestrate multiple concurrent signing attempts for each M-size subset within O to increase the chances of one succeeding. It appears Monero uses this approach. It also turns out (an esoteric point) that the {\em original} list of output destinations created by the initiator is randomly shuffled, and that random list is then used by all concurrent signing attempts, and all other co-signers (this is related to the obscure flag {\tt shuffle\_outs}).}\footnote{Currently Monero appears to use a round-robin signing method\marginnote{src/wallet/ wallet2.cpp {\tt sign\_multi- sig\_tx()}}, where the initiator signs with all his private keys, passes the partially signed transaction to another signer who signs with all {\em his} private keys (that have not been used to sign with yet), who passes to yet another signer, and so on, until the final signer who can either publish the transaction or send it to other signers so they can publish it.}
 
 In the previous example, participant 1 computes\vspace{.175cm}
-\[r_1 = \alpha_1 - c*[k^{agg,\textrm{2x3}}_{1,3} + k^{agg,\textrm{2x3}}_{1,2}]\] 
+\[r_1 = \alpha_1 - c*[k^{agg,\textrm{2x3}}_{1,3} + k^{agg,\textrm{2x3}}_{1,2}]\]
 
 while participant 2 only computes
 \[r_2 = \alpha_2 - c*k^{agg,\textrm{2x3}}_{2,3}\]
@@ -453,13 +453,13 @@ Person 1\marginnote{src/multi- sig/multi- sig.cpp {\tt generate\_ multisig\_ der
 
 The group could use $k^{sh,\textrm{1x3}} = \mathcal{H}_n(k^{base}_1 k^{base}_2 k^{base}_3 G)$ as a shared private key, and publish\vspace{.155cm} \[K^{grp,\textrm{1x3}} = \mathcal{H}_n(T_{agg},\mathbb{S}^{\textrm{1x3}},K^{sh,\textrm{1x3}}) K^{sh,\textrm{1x3}}\] as a 1-of-3 multisig address.
 
-In a 3-of-3 multisig every 1 person has a secret, in a 2-of-3 multisig every group of 2 people has a shared secret, and in 1-of-3 every group of 3 people has a shared secret. 
+In a 3-of-3 multisig every 1 person has a secret, in a 2-of-3 multisig every group of 2 people has a shared secret, and in 1-of-3 every group of 3 people has a shared secret.
 
 Now we can generalize to M-of-N: every possible group of (N-M+1) people has a shared secret \cite{old-multisig-mrl-note}. If (N-M) people are missing, all their shared secrets are owned by at least one of the M remaining people, who can collaborate to sign with the group's key.
 
 \subsubsection*{M-of-N algorithm}
 
-Given participants $e \in \{1,...,N\}$ with initial private keys $k^{base}_1,...,k^{base}_N$ who wish to produce an M-of-N merged key (M $\leq$ N; M $\geq$ 1 and N $\geq$ 2), we can use an\marginnote{src/wallet/ wallet2.cpp {\tt exchange\_ multisig\_ keys()}} interactive algorithm. 
+Given participants $e \in \{1,...,N\}$ with initial private keys $k^{base}_1,...,k^{base}_N$ who wish to produce an M-of-N merged key (M $\leq$ N; M $\geq$ 1 and N $\geq$ 2), we can use an\marginnote{src/wallet/ wallet2.cpp {\tt exchange\_ multisig\_ keys()}} interactive algorithm.
 
 We will use $\mathbb{S}_s$ to denote all the {\em unique} public keys at stage $s \in \{0,...,(N-M)\}$. The final set $\mathbb{S}_{N-M}$ is ordered according to a sorting convention (such as smallest to largest numerically, i.e. lexicographically). This notation is a convenience, and $\mathbb{S}_s$ is the same as $\mathbb{S}^{\textrm{(N-s)xN}}$ from the previous sections.
 
@@ -499,9 +499,9 @@ Note: If users want to have unequal signing power in a multisig, like 2 shares i
 \section{Key families}
 \label{sec:general-key-families}
 
-Up to this point we have considered key aggregation between a simple group of signers. For example, Alice, Bob, and Carol each contributing key components to a 2-of-3 multisig address. 
+Up to this point we have considered key aggregation between a simple group of signers. For example, Alice, Bob, and Carol each contributing key components to a 2-of-3 multisig address.
 
-Now imagine Alice wants to sign all transactions from that address, but doesn't want Bob and Carol to sign without her. In other words, (Alice + Bob) or (Alice + Carol) are acceptable, but not (Bob + Carol). 
+Now imagine Alice wants to sign all transactions from that address, but doesn't want Bob and Carol to sign without her. In other words, (Alice + Bob) or (Alice + Carol) are acceptable, but not (Bob + Carol).
 
 We can achieve that scenario with two layers of key aggregation. First a 1-of-2 multisig aggregation $\mathbb{K}^{agg,{1\textrm{x}2}}_{BC}$ between Bob and Carol, then a 2-of-2 group key $K^{grp,{2\textrm{x}2}}$ between Alice and $\mathbb{K}^{agg,{1\textrm{x}2}}_{BC}$. Basically, a (2-of-([1-of-1] and [1-of-2])) multisig address.
 
@@ -510,6 +510,7 @@ This implies access structures to signing rights can be fairly open-ended.
 \subsection{Family trees}
 
 We can diagram the (2-of-([1-of-1] and [1-of-2])) multisig address like this:
+\begin{otherlanguage}{english}
 \begin{center}
     \begin{forest}
         forked edges,
@@ -526,12 +527,14 @@ We can diagram the (2-of-([1-of-1] and [1-of-2])) multisig address like this:
                 [$K^{base}_C$]
             ]
         ]
-    \end{forest}    
+    \end{forest}
 \end{center}
+\end{otherlanguage}
 
-The keys $K^{base}_A,K^{base}_B,K^{base}_C$ are considered {\em root ancestors}, while $\mathbb{K}^{agg,{1\textrm{x}2}}_{BC}$ is the {\em child} of {\em parents} $K^{base}_B$ and $K^{base}_C$. Parents can have more than one child, though for conceptual clarity we consider each copy of a parent as distinct. This means there can be multiple root ancestors that are the same key. 
+The keys $K^{base}_A,K^{base}_B,K^{base}_C$ are considered {\em root ancestors}, while $\mathbb{K}^{agg,{1\textrm{x}2}}_{BC}$ is the {\em child} of {\em parents} $K^{base}_B$ and $K^{base}_C$. Parents can have more than one child, though for conceptual clarity we consider each copy of a parent as distinct. This means there can be multiple root ancestors that are the same key.
 
 For example, in this 2-of-3 and 1-of-2 joined in a 2-of-2, Carol's key $K^{base}_C$ is used twice and displayed twice:
+\begin{otherlanguage}{english}
 \begin{center}
     \begin{forest}
         forked edges,
@@ -552,8 +555,9 @@ For example, in this 2-of-3 and 1-of-2 joined in a 2-of-2, Carol's key $K^{base}
                 [$K^{base}_D$]
             ]
         ]
-    \end{forest}    
+    \end{forest}
 \end{center}
+\end{otherlanguage}
 
 Separate sets $\mathbb{S}$ are defined for each multisig sub-coalition. There are three premerge sets in the previous example: $\mathbb{S}^{\textrm{2x3}}_{ABC} = \{K^{sh,\textrm{2x3}}_{AB},K^{sh,\textrm{2x3}}_{BC},K^{sh,\textrm{2x3}}_{AC}\}$, $\mathbb{S}^{\textrm{1x2}}_{CD} = \{K^{sh,\textrm{1x2}}_{CD}\}$, and $\mathbb{S}^{\textrm{2x3}}_{final} = \{\mathbb{K}^{agg,{2\textrm{x}3}}_{ABC},\mathbb{K}^{agg,{1\textrm{x}2}}_{CD}\}$.
 
@@ -562,6 +566,7 @@ Separate sets $\mathbb{S}$ are defined for each multisig sub-coalition. There ar
 \label{subsec:nesting-multisig-keys}
 
 Suppose we have the following key family
+\begin{otherlanguage}{english}
 \begin{center}
     \begin{forest}
         forked edges,
@@ -580,8 +585,9 @@ Suppose we have the following key family
             [$K^{base}_D$]
             [$K^{base}_E$]
         ]
-    \end{forest}    
+    \end{forest}
 \end{center}
+\end{otherlanguage}
 
 If we merge the keys in $\mathbb{S}^{\textrm{2x3}}_{ABC}$ corresponding to the first 2-of-3, we run into an issue at the next level. Let's take just one shared secret, between $K^{grp,\textrm{2x3}}_{ABC}$ and $K^{base}_D$, to illustrate:\vspace{.175cm}
 \[k_{ABC,D} = \mathcal{H}_n(k^{grp,\textrm{2x3}}_{ABC} K^{base}_D)\]
@@ -607,11 +613,12 @@ Users should store their base private keys, the aggregation private keys for all
 
 \subsection{Implications for Monero}
 
-Each sub-coalition contributing to the final key needs to contribute components to Monero transactions (such as the opening values $\alpha G$), and so every sub-sub-coalition needs to contribute to its child sub-coalition. 
+Each sub-coalition contributing to the final key needs to contribute components to Monero transactions (such as the opening values $\alpha G$), and so every sub-sub-coalition needs to contribute to its child sub-coalition.
 
 This means every root ancestor, even when there are multiple copies of the same key in the family structure, must contribute one root component to their child, and each child one component to its child and so on. We use simple sums at each level.
 
 For example, let's take this family
+\begin{otherlanguage}{english}
 \begin{center}
     \begin{forest}
         forked edges,
@@ -628,8 +635,9 @@ For example, let's take this family
                 [${}^{1}\mathbb{K}^{base}_B$]
             ]
         ]
-    \end{forest}    
+    \end{forest}
 \end{center}
+\end{otherlanguage}
 
 Say they need to compute some group value $x$ for a signature. Root ancestors contribute: $x_{A,1}$, $x_{A,2}$, $x_B$. The total is $x = x_{A,1} + x_{A,2} + x_B$.
 

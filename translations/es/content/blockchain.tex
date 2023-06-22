@@ -48,8 +48,8 @@ Clearly the earliest legitimate transaction spending a piece of money should be 
 
 First we need all computers, henceforth referred to as {\em nodes}, to agree on the order of transactions.
 
-Let's say a currency started with a `genesis' declaration: ``Let the SampleCoin begin!". We call this message a `block', and its block hash is \vspace{.175cm}
-\[\mathit{BH}_G = \mathcal{H}(\textrm{``Let the SampleCoin begin!"})\]
+Let's say a currency started with a `genesis' declaration: «Let the SampleCoin begin!». We call this message a `block', and its block hash is \vspace{.175cm}
+\[\mathit{BH}_G = \mathcal{H}(\textrm{«Let the SampleCoin begin!»})\]
 
 Every time a node receives some transactions, they use hashes of those transactions, $\mathit{TH}$, like messages, along with the previous block's hash, and compute new block hashes\vspace{.175cm}
 \[\mathit{BH}_1 = \mathcal{H}(\mathit{BH}_G, \mathit{TH}_1, \mathit{TH}_2,...)\]
@@ -77,7 +77,7 @@ The output of a cryptographic hash function is uniformly distributed and apparen
 
 Let's imagine a hash function $\mathcal{H}_i(x)$ which outputs a number from 1 to 100: $\mathcal{H}_i(x) \in^D_R \{1,...,100\}$.\footnote{We use $\in^D_R$ to say the output is deterministically random.} Given some $x$, $\mathcal{H}_i(x)$ selects the same `random' number from \{$1,...,100$\} every time you calculate it. It takes 1 minute to calculate $\mathcal{H}_i(x)$.
 
-Say we are given a message $\mathfrak{m}$, and told to find a `nonce' $n$ (some integer) such that $\mathcal{H}_i(\mathfrak{m},n)$ outputs a number less than or equal to the {\em target} $t = 5$ (i.e. $\mathcal{H}_i(\mathfrak{m},n) \in \{1,...,5\}$). 
+Say we are given a message $\mathfrak{m}$, and told to find a `nonce' $n$ (some integer) such that $\mathcal{H}_i(\mathfrak{m},n)$ outputs a number less than or equal to the {\em target} $t = 5$ (i.e. $\mathcal{H}_i(\mathfrak{m},n) \in \{1,...,5\}$).
 
 Since only $1/20$\nth of outputs from $\mathcal{H}_i(x)$ will meet the target, it should take around 20 guesses of $n$ to find one that works (and hence 20 minutes of computing time).
 
@@ -151,7 +151,7 @@ There are two basic mechanisms for creating money in a blockchain-based cryptocu
 
 First, the currency's creators can conjure coins and distribute them to people in the genesis message. This is often called an `airdrop'. Sometimes creators give themselves a large amount in a so-called `pre-mine'. \cite{premine-description}
 
-Second, the currency can be automatically distributed as reward for mining a block, much like mining for gold. There are two types here. In the Bitcoin model the total possible supply is capped. Block rewards slowly decline to zero, after which no more money is ever made. In the inflation model supply increases indefinitely. 
+Second, the currency can be automatically distributed as reward for mining a block, much like mining for gold. There are two types here. In the Bitcoin model the total possible supply is capped. Block rewards slowly decline to zero, after which no more money is ever made. In the inflation model supply increases indefinitely.
 
 Monero is based on a currency known as Bytecoin that had a sizeable pre-mine, followed by block rewards \cite{monero-history}. Monero had no pre-mine, and as we will see, its block rewards slowly decline to a small amount after which all new blocks reward that same amount, making Monero inflationary.
 
@@ -167,7 +167,7 @@ With block rewards, competition between miners drives total hash rate up until t
 
 \subsubsection*{Bit shifting}
 
-Bit shifting is used for calculating the base block reward (as we will see in Section \ref{subsec:penalty}, the actual block reward can sometimes be reduced below the base amount). 
+Bit shifting is used for calculating the base block reward (as we will see in Section \ref{subsec:penalty}, the actual block reward can sometimes be reduced below the base amount).
 
 Suppose we have an integer A = 13 with bit representation [1101]. If we shift the bits of A down by 2 using the bitwise shift right operator, denoted A $>>$ 2, we get [0011].01, which equals 3.25. In reality that last part gets thrown away - `shifted' into oblivion, leaving us with [0011] = 3.\footnote{Bitwise shift right by $n$ bits is equivalent to integer division by $2^n$.}
 
@@ -190,7 +190,7 @@ As blocks are mined M grows, lowering subsequent block rewards. Initially (since
 \subsection{Dynamic block weight}
 \label{subsec:dynamic-block-weight}
 
-It would be nice to mine every new transaction into a block right away. What if someone submits a lot of transactions maliciously? The blockchain, storing every transaction, would quickly grow enormous. 
+It would be nice to mine every new transaction into a block right away. What if someone submits a lot of transactions maliciously? The blockchain, storing every transaction, would quickly grow enormous.
 
 One mitigation is a fixed block size (in bytes), so the number of transactions per block is limited. What if honest transaction volume rises? Each transaction author would bid for a spot in new blocks by offering fees to miners. Miners would focus on mining transactions with the highest fees. As transaction volume increases, fees would become prohibitively large for transactions of small amounts (such as Alice buying an apple from Bob). Only people willing to outbid everyone else would get their transactions into the blockchain.\footnote{Bitcoin has a history of overloaded transaction volume. This website (\url{https://bitcoinfees.info/}) charts the ridiculous fee levels encountered (up to the equivalent of 35\$ per transaction at one point).}\\
 
@@ -392,11 +392,12 @@ The following information is hashed:
 \end{itemize}
 
 In this tree diagram the black arrow indicates a hash of inputs.
-        
+
+\begin{otherlanguage}{english}
 \begin{center}
     \begin{forest}
         forked edges,
-        for tree = {grow'=90, 
+        for tree = {grow'=90,
                     edge = {<-, > = triangle 60},
                     fork sep = 4.5 mm,
                     l sep = 8 mm,
@@ -408,8 +409,9 @@ In this tree diagram the black arrow indicates a hash of inputs.
             [$\mathcal{H}_n$(TX Prefix)]
             [$\mathcal{H}_n$(TX Stuff)] [$\mathcal{H}_n$(Signatures)]
         ]
-    \end{forest}    
+    \end{forest}
 \end{center}
+\end{otherlanguage}
 
 In place of an `input', a miner transaction records the block height of its block. This ensures the miner transaction's ID, which is simply a normal transaction ID except with $\mathcal{H}_n$(Signatures) $\rightarrow$ 0, is always unique, for simpler ID-searching.
 
@@ -423,10 +425,11 @@ To\marginnote{src/crypto/ tree-hash.c {\tt tree\_hash()}} facilitate `pruning' t
 
 An example Merkle tree based on four transactions and a miner transaction is diagrammed in Figure \ref*{chapter:blockchain}.1.\footnote{A bug in Monero's Merkle tree code led to a serious, though apparently non-critical, real-world attack on September 4\nth, 2014 \cite{MRL-0002-merkle-problem}.}
 
+\begin{otherlanguage}{english}
 \begin{center}
     \begin{forest}
         forked edges,
-        for tree = {grow'=90, 
+        for tree = {grow'=90,
                     edge = {<-, > = triangle 60},
                     fork sep = 4.5 mm,
                     l sep = 8 mm,
@@ -434,11 +437,11 @@ An example Merkle tree based on four transactions and a miner transaction is dia
                     },
         sn edges,
         where n children=0{tier=terminus}{},
-        [Merkle Root  
+        [Merkle Root
             [$Hash$ B
                 [Transaction ID \\1]
                 [Transaction ID \\2]
-            ] 
+            ]
             [$Hash$ C
                 [Transaction ID \\3]
                 [$Hash$ A
@@ -452,6 +455,7 @@ An example Merkle tree based on four transactions and a miner transaction is dia
         {\emph{Figure \ref*{chapter:blockchain}.1: Merkle Tree}};
     \end{forest}
 \end{center}
+\end{otherlanguage}
 
 A Merkle root is inherently a reference to all its included transactions.
 

@@ -1,12 +1,12 @@
-\chapter{Basic Concepts}
+\chapter{Conceptos básicos}
 \label{chapter:basicConcepts}
 
 
 
 %----------NOTATION
-\section{A few words about notation}
+\section{Unas palabras sobre la notación}
 
-A focal objective of this report was to collect, review, correct, and homogenize all existing information concerning the inner workings of the Monero cryptocurrency. And, at the same time supply all the necessary details to present the material in a constructive and single-threaded manner.
+Un objetivo central de este informe ha sido recoger, revisar, corregir y homogeneizar toda la información existente en relación al funcionamiento interno de la criptomoneda Monero; y, al mismo tiempo, proporcionar todos los detalles necesarios para presentar el material de forma constructiva y con un solo hilo.
 
 An important instrument to achieve this was to settle for a number of notational conventions. Among others, we have used:
 
@@ -24,7 +24,7 @@ However, we don’t see this as a loss. A simple object such as an integer or a 
 
 Elliptic curve points are normally denoted by pairs \((x, y)\), and can therefore be represented with two integers. However, in the world of cryptography it is common to apply {\em point compression} techniques, which allow representing a point using only the space of one coordinate. For our conceptual approach it is often accessory whether point compression is used or not, but most of the time it is implicitly assumed.\\
 
-We\marginnote{src/crypto/ {\tt keccak.c}} have also used cryptographic hash functions freely without specifying any concrete algorithms. In the case of Monero it will typically be a \(\mathit{Keccak}\)\footnote{\label{kekkak_note}The Keccak hashing algorithm forms the basis for the NIST standard {\em SHA-3} \cite{nist-sha3}.} variant, but if not explicitly mentioned then it is not important to the theory. 
+We\marginnote{src/crypto/ {\tt keccak.c}} have also used cryptographic hash functions freely without specifying any concrete algorithms. In the case of Monero it will typically be a \(\mathit{Keccak}\)\footnote{\label{kekkak_note}The Keccak hashing algorithm forms the basis for the NIST standard {\em SHA-3} \cite{nist-sha3}.} variant, but if not explicitly mentioned then it is not important to the theory.
 
 A cryptographic hash function (henceforth simply `hash function', or `hash') takes in some message $\mathfrak{m}$ of arbitrary length and returns a hash $h$ (or `message digest') of fixed length, with each possible output equiprobable for a given input. Cryptographic hash functions are difficult to reverse, have an interesting feature known as the {\em large avalanche effect} which can cause very similar messages to produce very dissimilar hashes, and it is hard to find two messages with the same message digest.
 
@@ -55,10 +55,10 @@ To perform $c = a+b \pmod n$, where $a$ and $b$ are each less than the modulus $
 	\item Compute $x = n-a$. If $x > b$ then $c = a+b$, otherwise $c = b - x$.
 \end{itemize}
 
-We can use modular addition to achieve modular multiplication ($a*b \pmod n = c$) with an algorithm called `double-and-add'. Let us demonstrate by example. Say we want to do $7*8 \pmod 9 = 2$. It is the same as 
+We can use modular addition to achieve modular multiplication ($a*b \pmod n = c$) with an algorithm called `double-and-add'. Let us demonstrate by example. Say we want to do $7*8 \pmod 9 = 2$. It is the same as
 \[7*8 = 8+8+8+8+8+8+8 \pmod 9\]
 
-Now break this into groups of two. 
+Now break this into groups of two.
 \[(8+8) + (8+8) + (8+8) + 8\]
 
 And again, by groups of two.
@@ -66,7 +66,7 @@ And again, by groups of two.
 
 The total number of $+$ point operations falls from 6 to 4 because we only need to find $(8+8)$ once.\footnote{The effect of double-and-add becomes apparent with large numbers. For example, with $2^{15} * 2^{30}$ straight addition would require about $2^{15}$ $+$ operations, while double-and-add only requires 15!}\\
 
-Double-and-add is implemented by converting the first number (the `multiplicand' $a$) to binary (in our example, 7 $\rightarrow$ [0111]), then going through the binary array and doubling and adding. 
+Double-and-add is implemented by converting the first number (the `multiplicand' $a$) to binary (in our example, 7 $\rightarrow$ [0111]), then going through the binary array and doubling and adding.
 
 Let's make an array $A = [0111]$ and index it 3,2,1,0.\footnote{This is known as `LSB 0' numbering, since the least significant bit has index 0. We will use `LSB 0' for the rest of this chapter. The point here is clarity, not accurate conventions.} A[0] = 1 is the first element of A and is the least significant bit. We set a result variable to be initially $r = 0$, and set a sum variable to be initially $s = 8$ (more generally, we start with $s = b$). We follow this algorithm:
 \begin{enumerate}
@@ -127,7 +127,7 @@ In modular arithmetic, for $c = a^{-1} \pmod{n}$, $a c \equiv 1 \pmod{n}$ for $0
 We can use square-and-multiply to compute the modular multiplicative inverse when $n$ is a prime number because of {\em Fermat's little theorem}:\footnote{\label{inverse_rule_note}The modular multiplicative inverse has a rule stating:\\
 {\em If $a c \equiv b \pmod{n}$ with $a$ and $n$ relatively prime, the solution to this linear congruence is given by \(c = a^{-1} b \pmod{n}\).}\cite{wiki-modular-arithmetic}\\
 It means we can do $c = a^{-1} b \pmod n \rightarrow ca \equiv b \pmod n \rightarrow a \equiv c^{-1} b \pmod n$.}\vspace{.175cm}
-\begin{align*} 
+\begin{align*}
     a^{n-1} &\equiv 1 \pmod{n} \\
     a*a^{n-2} &\equiv 1 \pmod{n} \\
     c \equiv a^{n-2} &\equiv a^{-1} \pmod{n}
@@ -191,7 +191,7 @@ In what follows we will prefer this second form. The advantage it offers over th
 Let \(P_1 = (x_1, y_1)\) and \(P_2 = (x_2, y_2)\) be two points belonging to a Twisted Edwards elliptic curve (henceforth known simply as an EC). We define addition on points by defining $P_1 + P_2 = (x_1, y_1) + (x_2, y_2)$ as the point $P_3 = (x_3, y_3)$ where\footnote{Typically elliptic curve points are converted into projective coordinates\marginnote{src/crypto/ crypto\_ops\_ builder/ ref10Comm- entedComb- ined/\\ ge.h} prior to curve operations like point addition, in order to avoid performing field inversions for efficiency. \cite{ecc-projective}}\vspace{.175cm}
 \begin{align*}
 x_3 & =  \frac{x_1 y_2 + y_1 x_ 2}{1 + d x_1 x_2 y_1 y_2}  \pmod{q} \\
-y_3 & =  \frac{y_1 y_2 - a x_1 x_2}{1 - d x_1 x_2 y_1 y_2} \pmod{q} 
+y_3 & =  \frac{y_1 y_2 - a x_1 x_2}{1 - d x_1 x_2 y_1 y_2} \pmod{q}
 \end{align*}
 
 These formulas for addition also apply for point doubling; that is, when  \(P_1 = P_2\). To subtract a point, invert its coordinates over the y-axis, $(x,y) \rightarrow (-x,y)$ \cite{Bernstein2008}, and use point addition. Recall that `negative' elements $-x$ of $\mathbb{F}_q$ are really $-x \pmod{q}$.
@@ -216,7 +216,7 @@ To find the order, $u$, of any given point $P$'s subgroup:
     \item Find all the divisors of $N$.
     \item For every divisor $n$ of $N$, compute $n P$.
     \item The smallest $n$ such that $n P = 0$ is the order $u$ of the subgroup.
-\end{enumerate} 
+\end{enumerate}
 
 ECs\marginnote{{\tt ge}: group element} selected for cryptography typically have $N = hl$, where $l$ is some sufficiently large (such as 160 bits) prime number and $h$ is the so-called {\em cofactor} which could be as small as 1 or 2.\footnote{EC with small cofactors allow relatively faster point addition, etc. \cite{Bernstein2008}.} One point in the subgroup of size $l$ is usually selected to be the generator $G$ as a convention. For every other point $P$ in that subgroup there exists an integer $0 < n \leq l$ satisfying $P = n G$.
 
@@ -255,7 +255,7 @@ Note that EC scalars for points in the subgroup of size $l$ (which we will be us
 \label{ec:keys}
 Public key cryptography algorithms can be devised in a way analogous to modular arithmetic.
 
-Let \(k\) be a randomly selected number satisfying \(0 < k < l\), and call it a {\em private key}.\footnote{The private key is sometimes known as a {\em secret key}. This lets us abbreviate: pk = public key, sk = secret key.} Calculate the corresponding {\em public key} \(K\) (an EC point) with the scalar product \(k G = K\). 
+Let \(k\) be a randomly selected number satisfying \(0 < k < l\), and call it a {\em private key}.\footnote{The private key is sometimes known as a {\em secret key}. This lets us abbreviate: pk = public key, sk = secret key.} Calculate the corresponding {\em public key} \(K\) (an EC point) with the scalar product \(k G = K\).
 
 Due to the {\em discrete logarithm problem} (DLP) we cannot easily deduce \(k\) from \(K\) alone. This property allows us to use the values \((k, K)\) in standard public key cryptography algorithms.
 
@@ -273,7 +273,7 @@ A basic {\em Diffie-Hellman} \cite{Diffie-Hellman} exchange of a shared secret b
 	Alice could privately calculate \(S = k_A K_B\), and Bob \(S = k_B K_A\), allowing them to use this single value as a shared secret.
 
 	For example, if Alice has a message $m$ to send Bob, she could hash the shared secret \(h = \mathcal{H}(S)\), compute $x = m + h$, and send $x$ to Bob. Bob computes $h' = \mathcal{H}(S)$, calculates $m = x - h'$, and learns $m$.
-\end{enumerate}   
+\end{enumerate}
 
 An external observer would not be able to easily calculate the shared secret due to the `Diffie-Hellman Problem' (DHP), which says finding $S$ from $K_A$ and $K_B$ is very difficult. Also, the DLP prevents them from finding $k_A$ or $k_B$.\footnote{The DHP is thought to be of at least similar difficulty to the DLP, although it has not been proven. \cite{diffie-hellman-problem}}
 
@@ -381,7 +381,7 @@ Therefore the owner of $k_A$ (Alice) created $(c,r)$ for $\mathfrak{m}$: she sig
 \section{Curve Ed25519}
 \label{Ed25519_section}
 
-Monero uses a particular Twisted Edwards elliptic curve for cryptographic operations, {\em Ed25519}, the {\em birational equivalent}\footnote{\label{birational_note}Without giving further details, birational equivalence can be thought of as an isomorphism expressible using rational terms.} 
+Monero uses a particular Twisted Edwards elliptic curve for cryptographic operations, {\em Ed25519}, the {\em birational equivalent}\footnote{\label{birational_note}Without giving further details, birational equivalence can be thought of as an isomorphism expressible using rational terms.}
 of the Montgomery curve {\em Curve25519}.
 
 Both Curve25519 and Ed25519 were released by Bernstein {\em et al.} \cite{Bernstein2008, Bernstein2012, Bernstein2007}.\footnote{Dr. Bernstein also developed an encryption scheme known as ChaCha \cite{Bernstein_chacha,chacha-irtf}, which the primary Monero implementation uses to encrypt\marginnote{src/wallet/ ringdb.cpp} certain sensitive information related to users' wallets.}
@@ -389,7 +389,7 @@ Both Curve25519 and Ed25519 were released by Bernstein {\em et al.} \cite{Bernst
 The\marginnote{src/crypto/ crypto\_ops\_ builder/ ref10Comm- entedComb- ined/\\ ge.h} curve is defined over the prime field \(\mathbb{F}_{2^{255} - 19}\) (i.e. $q = 2^{255}-19$) by means of the following equation:\vspace{.175cm}
 \[-x^2 + y^2 = 1 - \frac{121665}{121666} x^2 y^2\]
 
-This curve addresses many concerns raised by the cryptography community.\footnote{Even if a curve appears to have no cryptographic security problems, it's possible the person/organization that created it knows a secret issue that only crops up in very rare curves. Such a person may have to randomly generate many curves in order to find one with a hidden weakness and no known weaknesses. If reasonable explanations are required for curve parameters, then it becomes even more difficult to find weak curves that will be accepted by the cryptographic community. Curve Ed25519 is known as a `fully rigid' curve, which means its generation process was fully explained. \cite{elliptic-curve-rigidity}} It is well known that NIST\footnote{\label{NIST_note}National Institute of Standards and Technology, \url{https://www.nist.gov/}} 
+This curve addresses many concerns raised by the cryptography community.\footnote{Even if a curve appears to have no cryptographic security problems, it's possible the person/organization that created it knows a secret issue that only crops up in very rare curves. Such a person may have to randomly generate many curves in order to find one with a hidden weakness and no known weaknesses. If reasonable explanations are required for curve parameters, then it becomes even more difficult to find weak curves that will be accepted by the cryptographic community. Curve Ed25519 is known as a `fully rigid' curve, which means its generation process was fully explained. \cite{elliptic-curve-rigidity}} It is well known that NIST\footnote{\label{NIST_note}National Institute of Standards and Technology, \url{https://www.nist.gov/}}
 standard algorithms have issues. For example, it has recently become clear the NIST standard random number generation algorithm PNRG (the version based on elliptic curves) is flawed and contains a potential backdoor \cite{hales2014nsa}. Seen from a broader perspective, standardization authorities like NIST lead to a cryptographic monoculture, introducing a point of centralization. A great example of this was illustrated when the NSA used its influence over NIST to weaken an international cryptographic standard \cite{NSA-NIST}.
 
 Curve Ed25519 is not subject to any patents (see \cite{ECC-patents} for a discussion on this subject), and the team behind it has
@@ -419,7 +419,7 @@ Assume we want to compress a point \((x, y)\).
 
 \begin{description}
 	\item[Encoding] We\marginnote{src/crypto/ crypto\_ops\_ builder/ ref10Comm- entedComb- ined/\\ ge\_to- bytes.c} set the most significant bit of $y$ to 0 if $x$ is even, and 1 if it is odd. The resulting value $y’$ will represent the curve point.
-	
+
 	\item[Decoding] \hfill
 	    \begin{enumerate}
     	    \item Retrieve\marginnote{ge\_from- bytes.c}[2.05cm] the compressed point $y’$, then copy its most significant bit to the parity bit $b$ before setting it to 0. Now it is the original $y$ again.
@@ -445,18 +445,18 @@ For illustration purposes we will describe a highly optimized and secure alterna
 
 Among other things, instead of generating random integers every time, it uses a hash value derived from the private key of the signer and the message itself. This circumvents security flaws related to the implementation of random number generators. Also, another goal of the algorithm is to avoid accessing secret or unpredictable memory locations to prevent so-called {\em cache timing attacks} \cite{Bernstein2012}.
 
-We provide here an outline of the steps performed by the algorithm. A complete description and sample implementation in the Python language can be found in \cite{rfc8032}. 
+We provide here an outline of the steps performed by the algorithm. A complete description and sample implementation in the Python language can be found in \cite{rfc8032}.
 
 \subsubsection*{Signature}
 
 \begin{enumerate}
-	\item Let \(h_k\) be a hash \(\mathcal{H}(k)\) of the signer's private key \(k\). 
+	\item Let \(h_k\) be a hash \(\mathcal{H}(k)\) of the signer's private key \(k\).
 	Compute \(\alpha\) as a hash \(\alpha = \mathcal{H}(h_k, \mathfrak{m})\) of the hashed private key and message. Depending on implementation, $\mathfrak{m}$ could be the actual message or its hash \cite{rfc8032}.
-	
+
 	\item Calculate \(\alpha G\) and the challenge $ch = \mathcal{H}([\alpha G], K,  \mathfrak{m})$.
 
 	\item Calculate the response \(r = \alpha + ch \cdot k \).
-	
+
 	\item The signature is the pair \((\alpha G, r)\).
 \end{enumerate}
 
@@ -465,7 +465,7 @@ Verification is performed as follows
 
 \begin{enumerate}
 	\item Compute \(ch' = \mathcal{H}([\alpha G], K,  \mathfrak{m})\).
-	
+
 	\item If the equality \(2^c r G \stackrel{?}{=} 2^c \alpha G + 2^c ch'*K \) holds then the signature is valid.
 \end{enumerate}
 
@@ -478,7 +478,7 @@ In this signature scheme we store one EC point and one scalar, and have one publ
 \subsubsection*{Why it works}
 \begin{align*}
 2^c r G &= 2^c (\alpha + \mathcal{H}([\alpha G], K,  \mathfrak{m}) \cdot k) \cdot G \\
-		&= 2^c \alpha G + 2^c \mathcal{H}([\alpha G], K,  \mathfrak{m}) \cdot K 
+		&= 2^c \alpha G + 2^c \mathcal{H}([\alpha G], K,  \mathfrak{m}) \cdot K
 \end{align*}
 
 \subsubsection*{Binary representation}
@@ -511,7 +511,7 @@ The binary operator XOR is a useful tool that will appear in Sections \ref{sec:i
 In the context of computer science, XOR is equivalent to bit addition modulo 2. For example, the XOR of two bit pairs:
 \begin{alignat*}{1}
     \text{XOR}(\{1,1\},\{1,0\}) &= \{1+1,1+0\} \pmod 2 \\
-                                &= \{0,1\} 
+                                &= \{0,1\}
 \end{alignat*}
 
 Each of these also produce $\{0,1\}$: $\text{XOR}(\{1,0\},\{1,1\})$, $\text{XOR}(\{0,0\},\{0,1\})$, and $\text{XOR}(\{0,1\},\{0,0\})$. For XOR inputs with $b$ bits, there are $2^{\text{b}} - 1$ other combinations of inputs that would make the same output. This means if $C = \text{XOR}(A,B)$ and input $A \in_R \{0,...,2^{\text{b}-1}\}$, an observer who learned $C$ would gain no information about $B$.
