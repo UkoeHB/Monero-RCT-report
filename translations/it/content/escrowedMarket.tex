@@ -1,0 +1,205 @@
+\chapter{Marketplace Monero con Deposito a Garanzia (Escrow)}
+\label{chapter:escrowed-market}
+
+La maggior parte delle volte, acquistare da un negozio online è un'operazione semplice che procede senza intoppi. In genere, l'acquirente invia del denaro al venditore e il prodotto atteso arriva alla porta di casa. Se il prodotto presenta un difetto, o in alcuni casi se l'acquirente cambia idea, può restituirlo e ottenere un rimborso.
+
+È difficile fidarsi di una persona o di una organizzazione che non si è mai incontrata prima, e molti acquirenti si sentono al sicuro sapendo che la propria compagnia di carte di credito può annullare un pagamento su richiesta \cite{credit-card-reversals}.
+
+Le transazioni in criptovalute non sono reversibili, ed il supporto legale a disposizione di acquirenti o venditori è limitato quando qualcosa va storto, specialmente per Monero, che non permette un'analisi semplice della blockchain \cite{chainalysis-2020-report}. Il fondamento dello shopping online sicuro con criptovalute è rappresentato dagli scambi con garanzia (escrow) basati sulle multifirme 2-su-3 (2-of-3 multisignature), che consentono a terze parti di mediare le controversie. Affidandosi a queste terze parti, anche venditori e acquirenti completamente anonimi possono interagire senza formalità.
+
+Poiché le interazioni multisig in Monero possono risultare piuttosto complesse (si veda la Sezione \ref{sec:simplified-communication}), dedichiamo questo capitolo alla descrizione di un ambiente di acquisto con garanzia il più efficiente possibile.\footnote{René ``rbrunner7'' Brunner, un contributore di Monero che ha creato il MMS \cite{mms-project-proposal, mms-manual}, ha studiato l'integrazione del multisig di Monero nel marketplace digitale decentralizzato basato su criptovalute OpenBazaar \url{https://openbazaar.org/}. I concetti presentati qui sono ispirati agli ostacoli incontrati da René \cite{openbazaar-rbrunner-investigation} (la sua `analisi preliminare').}\footnote{L'impressione iniziale degli autori è che l'attuale implementazione multisig di Monero abbia già un flusso di creazione delle transazioni simile a quello necessario per un ambiente di acquisto con garanzia, il che è una buona notizia per eventuali sforzi di implementazione. I lettori dovrebbero notare che il multisig di Monero necessita di alcuni aggiornamenti di sicurezza prima di poter essere adottato su larga scala \cite{multisig-research-issue-67}.}
+
+
+
+\section{Caratteristiche Essenziali}
+\label{sec:escrowed-marketplace-essential-features}
+
+Esistono diversi requisiti e funzionalità di base per rendere più fluide le interazioni tra acquirenti e venditori online. Prendiamo questi punti dall'indagine di Ren\'e su OpenBazaar \cite{openbazaar-rbrunner-investigation}, in quanto sono ragionevoli ed estendibili.
+\begin{itemize}
+    \item {\em Vendita offline}: Un acquirente dovrebbe poter accedere al negozio online di un venditore e effettuare un ordine anche quando il venditore è offline. Ovviamente, il venditore dovrà poi andare online per confermare l'ordine ed evaderlo.\footnote{Evadere un ordine di acquisto significa spedire il prodotto affinché venga consegnato all'acquirente.}
+    \item {\em Pagamenti basati su ordini di acquisto}: Gli indirizzi per la ricezione dei fondi del venditore sono univoci per ciascun ordine di acquisto, in modo da poter abbinare univocamente ordini e pagamenti.
+    \item {\em Acquisto ad alta fiducia}: Un acquirente può, se si fida del venditore, pagare un prodotto in anticipo, dunque prima che questo venga evaso e consegnato.
+    \begin{itemize}
+        \item {\em Pagamento diretto online}: Dopo aver verificato che il venditore sia online e che la sua inserzione sia disponibile, l'acquirente invia il denaro in una singola transazione all'indirizzo fornito dal venditore, il quale segnala quindi che l'ordine è in fase di evasione.
+        \item {\em Pagamento offline}: Se un venditore è offline, l'acquirente crea e finanzia un indirizzo multisig 1-su-2 con abbastanza fondi per coprire l'acquisto desiderato. Quando il venditore torna online, può prelevare i fondi dall'indirizzo multisig (restituendo l'eventuale resto all'acquirente) ed evadere l'ordine. Se il venditore non torna mai online (o ad esempio dopo un periodo di attesa ragionevole), oppure se l'acquirente cambia idea prima che ciò accada, l'acquirente può svuotare l'indirizzo multisig 1-su-2 ritrasferendo i fondi nel proprio portafoglio personale.
+    \end{itemize}{}
+    \item {\em Acquisto moderato}: Viene costruito un indirizzo multisig 2-su-3 tra acquirente, venditore e un moderatore scelto di comune accordo. L'acquirente finanzia questo indirizzo prima che il venditore evada l'ordine, e una volta che il prodotto è stato consegnato, due delle tre parti collaborano per sbloccare i fondi. Se venditore e acquirente non raggiungono un accordo, possono affidarsi al giudizio del moderatore.
+\end{itemize}
+
+Non tratteremo l'acquisto ad alta fiducia, in quanto, non essendo necessarie comunicazioni complesse, le funzionalità risultano piuttosto banali.\footnote{Il multisig 1-su-2 può sfruttare alcuni concetti utili anche per il multisig 2-su-3, in particolare per quanto riguarda la costruzione iniziale dell'indirizzo.}
+
+
+\subsection{Flusso di Lavoro per l'Acquisto}
+\label{subsec:escrowed-marketplace-purchasing-workflow}
+
+Tutti gli acquisti dovrebbero seguire la stessa sequenza di passaggi, supponendo che tutte le parti agiscano con la dovuta diligenza. Alcuni passaggi riguardano ciò che un moderatore dovrebbe aspettarsi quando interviene, ad esempio chiedere all'acquirente se ha richiesto un rimborso prima di richiedere il suo intervento.
+\begin{enumerate}
+    \item Un acquirente accede al negozio online del venditore, individua un prodotto da acquistare, seleziona `Acquista`, rende disponibili i fondi per tale acquisto, ed infine invia l'ordine al venditore.
+    \item Il venditore riceve l'ordine, verifica che il prodotto sia disponibile e che i fondi siano sufficienti, dunque restituisce eventualmente il denaro all'acquirente oppure evade l'ordine inviando il prodotto e notificando l'acquirente con una ricevuta.
+    \begin{itemize}
+        \item Per un multisig 2-su-3, l'acquirente può facoltativamente autorizzare il pagamento al momento della notifica di evasione.
+    \end{itemize}{}
+    \item L'acquirente riceve il prodotto come previsto, oppure non lo riceve in tempo o riceve un prodotto difettoso.
+    \begin{itemize}
+        \item {\em Prodotto conforme}: L'acquirente può lasciare un feedback facoltativo al venditore.
+        \begin{itemize}
+            \item {\em L'acquirente lascia un feedback}: Il feedback può essere positivo o negativo.
+            \begin{itemize}
+                \item {\em Feedback positivo}: Se si tratta di un pagamento multisig 2-su-3 non ancora finalizzato, questo è il momento in cui l'acquirente conferma il pagamento al venditore. Altrimenti, è semplicemente una recensione positiva. [FINE DEL FLUSSO]
+                \item {\em Feedback negativo}: Se si tratta di un pagamento multisig 2-su-3, si passa al flusso di `prodotto non conforme`. Altrimenti è solo una recensione negativa.
+            \end{itemize}{}
+            \item {\em L'acquirente non fa nulla}: O il venditore è già stato pagato, oppure si tratta di un multisig 2-su-3 e ha bisogno della cooperazione di qualcuno per sbloccare i fondi.
+            \begin{itemize}
+                \item {\em Il venditore è stato pagato}: [FINE DEL FLUSSO]
+                \item {\em Il venditore non è stato pagato}: Il venditore tenta di ottenere il pagamento.
+                \begin{enumerate}
+                    \item Il venditore contatta l'acquirente chiedendo il pagamento (o inviando un promemoria).
+                    \item L'acquirente può rispondere o meno.
+                    \begin{itemize}
+                        \item {\em L'acquirente risponde}: Può effettuare il pagamento, oppure richiedere un rimborso.\\
+                        $>$ {\em L'acquirente effettua il pagamento}: [FINE DEL FLUSSO]\\
+                        $>$ {\em L'acquirente richiede un rimborso}: Passare al flusso di `prodotto non conforme`.
+                        \item {\em L'acquirente non risponde}: Il venditore coinvolge il moderatore per sbloccare i fondi. [FINE DEL FLUSSO]
+                    \end{itemize}{}
+                \end{enumerate}{}
+            \end{itemize}
+        \end{itemize}{}
+        \item {\em Nessun prodotto o prodotto difettoso}: L'acquirente richiede un rimborso.
+        \begin{enumerate}
+            \item L'acquirente contatta il venditore chiedendo un rimborso, eventualmente fornendo una spiegazione.
+            \item Il venditore accetta la richiesta di rimborso, la contesta o la ignora.
+            \begin{itemize}
+                \item {\em Il venditore accetta}: Il denaro viene rimborsato all'acquirente. [FINE DEL FLUSSO]
+                \item {\em Il venditore contesta}: Può trattarsi di un pagamento multisig 2-su-3 o meno.
+                \begin{itemize}
+                    \item {\em Non è un multisig 2-su-3}: [FINE DEL FLUSSO]
+                    \item {\em È un multisig 2-su-3}: L'acquirente può rinunciare alla richiesta di rimborso (esplicitamente o non rispondendo in tempo), oppure insistere.
+                    \begin{itemize}
+                        \item {\em L'acquirente rinuncia}: Può aver autorizzato il pagamento al venditore o meno.\\
+                        $>$ {\em Ha autorizzato il pagamento}: [FINE DEL FLUSSO]\\
+                        $>$ {\em Non ha autorizzato il pagamento}: Il venditore contatta il moderatore, che autorizza il pagamento. [FINE DEL FLUSSO]
+                        \item {\em L'acquirente insiste}: Il venditore o l'acquirente contatta il moderatore, che coopera con le parti per giudicare la situazione. [FINE DEL FLUSSO]
+                    \end{itemize}{}
+                \end{itemize}
+            \end{itemize}{}
+        \end{enumerate}{}
+    \end{itemize}{}
+\end{enumerate}{}
+
+
+
+\section{Multisig Monero Trasparente}
+\label{sec:escrowed-marketplace-seamless-multisig}
+
+Possiamo sfruttare il naturale flusso di lavoro degli ordini di acquisto per integrare quasi tutte le parti di un'interazione multisig Monero 2-su-3 senza che i partecipanti se ne accorgano. C'è solo un piccolo passaggio aggiuntivo per il venditore alla fine, in cui deve firmare e inviare la transazione finale per ricevere il pagamento, in modo analogo a ``svuotare la cassa''.\footnote{Estendere questo schema oltre (N-1)-su-N è probabilmente irrealizzabile senza ulteriori passaggi, a causa dei round aggiuntivi necessari per configurare un indirizzo multisig con soglia inferiore.}
+
+
+\subsection{Basi dell'Interazione Multisig}
+\label{subsec:escrowed-marketplace-multisig-interaction-basics}
+
+Tutte le interazioni multisig 2-su-3 contengono lo stesso insieme di round di comunicazione, che coinvolgono la configurazione dell'indirizzo e la costruzione della transazione. Per rispettare il normale flusso di lavoro, utilizziamo un processo riorganizzato di costruzione della transazione rispetto al capitolo dedicato al multisig (si vedano le Sezioni \ref{sec:simplified-communication} e \ref{sec:n-1-of-n}).\footnote{Questa procedura è in realtà abbastanza simile a come Monero organizza attualmente le transazioni multisig.}
+\begin{enumerate}
+    \item {\em Configurazione dell'indirizzo}
+    \begin{enumerate}
+        \item Tutti gli utenti devono innanzitutto conoscere le chiavi di base degli altri partecipanti, che useranno per costruire segreti condivisi. Trasmettono le chiavi pubbliche di questi segreti condivisi (ad es. $K^{sh} = \mathcal{H}_n(k^{base}_A*k^{base}_B G) G$) agli altri utenti.
+        \item Dopo aver appreso tutte le chiavi pubbliche dei segreti condivisi, ciascun utente può eseguire le operazioni {\tt premerge} e poi {\tt merge} per ottenere la chiave pubblica di spesa dell'indirizzo. Le chiavi private aggregate di spesa saranno utilizzate per firmare le transazioni. Un hash della chiave privata del segreto condiviso tra i firmatari principali (acquirente e venditore), ad es. $k^{sh} = \mathcal{H}_n(k^{base}_A*k^{base}_B G)$, sarà utilizzato come chiave di visualizzazione (ad es. $k^v = \mathcal{H}_n(k^{sh})$). Saranno approfonditi questi dettagli in seguito (Sezione \ref{subsec:escrowed-marketplace-escrow-user-experience}).
+    \end{enumerate}{}
+    \item {\em Costruzione della transazione}: Si assume che l'indirizzo possieda almeno un output e che le immagini delle chiavi siano sconosciute. Ci sono due firmatari: l'iniziatore e il co-firmatario.
+    \begin{enumerate}
+        \item {\em Inizio della transazione}: L'iniziatore decide di avviare una transazione. Genera valori di apertura (ad es. $\alpha G$) per tutti gli output posseduti (non è ancora sicuro di quali verranno usati), e li comunica. Crea anche immagini parziali delle chiavi per quei determinati output, e le firma con una prova di legittimità (vedi Sezione \ref{sec:recalculating-key-images-multisig}). Invia queste informazioni, insieme al proprio indirizzo personale per la ricezione di fondi (ad es. per il resto, se appropriato), al co-firmatario.
+        \item {\em Creazione di una transazione parziale}: Il co-firmatario verifica che tutte le informazioni fornite siano valide. Decide i destinatari degli output e gli importi (che possono essere parzialmente basati sulle raccomandazioni dell'iniziatore), gli input da usare e i relativi decoy dei ring member, e la fee della transazione. Genera una chiave privata per la transazione (o più chiavi se sono coinvolti sottoindirizzo), crea indirizzi una tantum, commitment sugli output, importi codificati, maschere di commitment sugli pseudo output, e valori di apertura per i commitment a zero. Per dimostrare che gli importi sono in range, costruisce la Bulletproof per tutti gli output. Genera anche valori di apertura per la propria firma (ma non li comunica), scalari casuali per le firme MLSAG, immagini parziali delle chiavi per gli output posseduti, e prove di legittimità per tali immagini. Tutto questo viene inviato all'iniziatore.
+        \item {\em Firma parziale dell'iniziatore}: L'iniziatore verifica che le informazioni della transazione parziale siano valide e conformi alle sue aspettative (ad es. importi e destinatari sono corretti). Completa le firme MLSAG e le firma con le sue chiavi private, quindi invia la transazione parzialmente firmata al co-firmatario insieme ai propri valori di apertura rivelati.
+        \item {\em Completamento della transazione}: Il co-firmatario completa la firma della transazione e la invia alla rete.
+    \end{enumerate}{}
+\end{enumerate}{}
+
+\subsubsection*{Firma a Impegno Singolo (Single-commitment signing)}
+
+A differenza di quanto raccomandato nel capitolo sul multisig, viene fornito un solo impegno per transazione parziale (da parte dell'iniziatore della transazione), e viene rivelato solo dopo che il cofirmatario ha esplicitamente inviato il proprio valore di apertura. Lo scopo dell'impegno ai valori di apertura (es. $\alpha G$) è impedire a un cofirmatario malevolo di utilizzare il proprio valore di apertura per influenzare la sfida che verrà prodotta, il che potrebbe permettergli di scoprire le chiavi di aggregazione degli altri cofirmatari (si veda la Sezione \ref{sec:threshold-schnorr}). Se anche solo un valore di apertura parziale non è disponibile quando l’attore malevolo genera il proprio, allora è impossibile (o almeno trascurabilmente probabile) per lui avere un controllo sulla generazione della sfida.\footnote{Questo è anche il motivo per cui l’iniziatore rivela i propri valori di apertura solo dopo che tutte le informazioni sulla transazione sono state determinate, affinché nessuno dei firmatari possa alterare il messaggio MLSAG e influenzare la sfida.}\footnote{La firma con singolo impegno potrebbe essere generalizzata come firma con (M-1) impegni, in cui solo l’autore della transazione parziale non si impegna e rivela, mentre gli altri cofirmatari rivelano solo dopo che la transazione è stata completamente determinata. Per esempio, supponiamo che ci sia un indirizzo 3-di-3 con cofirmatari (A, B, C), che tentano la firma con singolo impegno. I firmatari B e C sono in una coalizione malevola contro A, mentre C è l’iniziatore e B è l’autore della transazione parziale. C inizia con un impegno, poi A fornisce il proprio valore di apertura (senza impegno). Quando B costruisce la transazione parziale, può cospirare con C per controllare la sfida della firma al fine di esporre la chiave privata di A. Si noti anche che la firma con (M-1) impegni è un concetto originale presentato qui per la prima volta, e non è supportato da alcuna ricerca avanzata o implementazione di codice. Potrebbe risultare completamente errato.}\footnote{Un modo per pensare a questo è considerare il significato e lo scopo di un "impegno" (si veda la Sezione \ref{sec:commitments}). Una volta che Alice si impegna al valore A, ne è vincolata, e non può trarre vantaggio da nuove informazioni derivanti dall'evento B (causato da Bob) che avviene successivamente. Inoltre, se A non è stato rivelato, allora B non può esserne influenzato. Alice e Bob possono essere certi che A e B siano indipendenti. Sosteniamo che la firma con singolo impegno, come descritta, soddisfi questo standard ed è equivalente alla firma con impegno completo. Se l’impegno $c$ è una funzione unidirezionale dei valori di apertura $\alpha_A G$ e $\alpha_B G$ (es. $c = \mathcal{H}_n(\alpha_A G,\alpha_B G)$), allora se $\alpha_A G$ viene inizialmente impegnato, $\alpha_B G$ viene rivelato dopo che $C(\alpha_A G)$ appare, e $\alpha_A G$ viene rivelato dopo $\alpha_B G$, allora $\alpha_B G$ e $\alpha_A G$ sono indipendenti, e $c$ sarà casuale sia dal punto di vista di Alice che di Bob (a meno che non collaborino, ed eccetto con probabilità trascurabile).}
+
+Semplificare in questo modo rimuove un round di comunicazione, il che ha conseguenze importanti per l’esperienza d’interazione tra acquirente e venditore.
+
+
+\subsection{Esperienza Utente con Escrow}
+\label{subsec:escrowed-marketplace-escrow-user-experience}
+
+Segue una descrizione dettagliata delle interazioni tra acquirente, venditore e moderatore in un acquisto online basato su multisig 2-di-3 utilizzando Monero.
+\begin{enumerate}
+    \item {\em L'acquirente effettua un acquisto}
+    \begin{enumerate}
+        \item {\em Nuova sessione di acquisto dell'acquirente}: Un'acquirente entra in un marketplace online, e il suo client genera un nuovo sottoindirizzo da utilizzare se inizia un nuovo ordine di acquisto.\footnote{Usare un nuovo sottoindirizzo per ogni ordine di acquisto, o addirittura per ogni venditore o prodotto del venditore, rende più difficile per i venditori tracciare il comportamento dei clienti. Aiuta anche a garantire l'unicità di ogni ordine, ad esempio nel caso in cui si acquisti due volte lo stesso oggetto.} In quel marketplace trova venditori, ciascuno dei quali offre una selezione di prodotti e prezzi. Invisibili all'acquirente ma visibili al suo client (cioè al software che sta usando per acquistare), ogni prodotto ha una chiave base per l'acquisto multisig. Accanto a essa c'è un elenco di moderatori preselezionati, ognuno dei quali possiede una chiave base e una chiave pubblica di un segreto condiviso precalcolato tra venditore e moderatore.\footnote{Sarebbe semplice per i venditori includere, invisibilmente per gli acquirenti, commitment ai valori di apertura delle transazioni. Tuttavia, per gestire più ordini per lo stesso prodotto, dovrebbero fornire molti commitment in anticipo per ogni potenziale acquirente. Questo potrebbe diventare molto disordinato. È qui che entra in gioco la nostra semplificazione della firma con commitment singolo.}
+        \item {\em L'acquirente aggiunge un prodotto al carrello}: L'acquirente decide di acquistare qualcosa, seleziona l'opzione di pagamento (cioè pagamento diretto, multisig 1-di-2, o multisig 2-di-3), e se seleziona multisig 2-di-3 viene presentata una lista di moderatori disponibili tra cui scegliere. Quando aggiunge il prodotto al carrello, il suo client, in modo trasparente (e supponendo abbia selezionato multisig 2-di-3), utilizza la chiave base del prodotto, quella del moderatore, e la chiave pubblica del segreto condiviso tra venditore e moderatore, combinandole con la chiave di spesa del sottoindirizzo di sessione dell'acquirente (come chiave base) per costruire un indirizzo multisig 2-di-3 acquirente-venditore-moderatore.\footnote{Il modo in cui un marketplace dovrebbe essere implementato è aperto a interpretazioni; ad esempio la scelta del tipo di pagamento potrebbe essere mostrata all'utente durante il checkout anziché durante l'aggiunta al carrello.} \\
+
+        La chiave di visualizzazione è l'hash del segreto condiviso privato tra acquirente e venditore (non della chiave privata aggregata, cioè prima di {\tt premerge}), mentre la chiave di cifratura per le comunicazioni tra acquirente e venditore è un hash della chiave di visualizzazione.\footnote{Lo stesso processo avverrebbe per il multisig 1-di-2, escludendo il moderatore.}
+        \item {\em L'acquirente procede al checkout}: L'acquirente visualizza il carrello con tutti i prodotti e decide di procedere al checkout. A questo punto rende i fondi disponibili prima di finalizzare l'ordine. Il client costruisce una transazione (ma non la firma ancora) che pagherà direttamente il venditore, oppure finanzierà un indirizzo multisig (aggiungendo una piccola somma per le fee future). Se si finanzia un indirizzo multisig 2-di-3, il client inizializza anche due transazioni per prelevare fondi da quell'indirizzo. Una potrà essere usata per pagare il venditore, l'altra per rimborsare l'acquirente. Le partial key images degli input sono basate sulla transazione di finanziamento non ancora firmata. \\
+        
+        In realtà, servono solo i valori di apertura impegnati per le due transazioni, e separatamente una copia delle partial key images (con prova di legittimità) e una copia del sottoindirizzo di sessione dell'acquirente. Quel sottoindirizzo ha un doppio scopo: è l'indirizzo dell'acquirente per rimborsi o resti, e la sua chiave di spesa è la chiave base multisig dell'acquirente.\footnote{È importante inizializzare transazioni separate, poiché i valori di apertura impegnati possono essere usati una sola volta.}
+        \item {\em L'acquirente autorizza il pagamento}: Dopo aver esaminato tutti i dettagli dell'ordine, l'acquirente lo autorizza.\footnote{Se l'acquirente annulla l'ordine, la sua transazione di finanziamento e le transazioni multisig parziali vengono eliminate.} Il client completa la firma della transazione di finanziamento e la invia alla rete.\footnote{Se il carrello contiene prodotti di più venditori, il client può creare più ordini separati. I venditori possono essere tutti pagati dalla stessa transazione di finanziamento.} Invia l'ordine di acquisto, insieme all'hash della transazione di finanziamento, le transazioni multisig inizializzate, e la chiave pubblica del segreto condiviso acquirente-moderatore, al venditore.\footnote{Il client dell'acquirente dovrebbe tenere traccia dei dettagli dell'ordine come il prezzo totale, per verificare in seguito il contenuto delle transazioni multisig prima di firmarle.}
+    \end{enumerate}{}
+    \item {\em Il venditore evade l'ordine}
+    \begin{enumerate}
+        \item {\em Il venditore valuta l'ordine}: Il venditore esamina l'ordine e lo approva per la spedizione. Se ha ricevuto un pagamento diretto non deve fare altro. Se il pagamento è multisig 1-di-2 può creare una transazione per prelevare da quell'indirizzo. Per multisig 2-di-3 il client genera un sottoindirizzo per ricevere il pagamento, e costruisce due transazioni parziali a partire da quelle inizializzate dall'acquirente. La transazione di pagamento invia un importo pari al prezzo del prodotto al venditore e il resto all'acquirente, mentre quella di rimborso restituisce tutto all'acquirente.\footnote{Le transazioni parziali potrebbero condividere molti valori poiché usano gli stessi input, ma solo una di esse verrà firmata. Per modularità e robustezza progettuale è preferibile gestirle separatamente.} Nota che l'indirizzo multisig viene ricostruito usando le chiavi base acquirente-venditore-moderatore e la chiave pubblica del segreto condiviso acquirente-moderatore.
+        \item {\em Il venditore spedisce il prodotto}: Il venditore spedisce il prodotto e invia una notifica di completamento all'acquirente. Questa notifica include una ricevuta dell'acquisto, e una richiesta per completare il pagamento (da qui in avanti si assume multisig 2-di-3). Invisibili all’utente, ci sono il sottoindirizzo di ordine del venditore, utile per una disputa, e le due transazioni parziali.
+    \end{enumerate}{}    
+    \item {\em L'acquirente completa il pagamento o richiede un rimborso}
+    \begin{enumerate}
+        \item {\em L'acquirente invia la transazione firmata parzialmente}: L'acquirente decide se completare il pagamento o richiedere un rimborso. Il suo client crea una firma parziale sulla transazione appropriata e la invia al venditore. Un eventuale rimborso potrebbe essere accompagnato da una giustificazione.        
+        \item {\em Il venditore completa la transazione}: Il venditore riceve la transazione parzialmente firmata, la completa, e la invia alla rete. Se necessario, invia una notifica di rimborso con prova all'acquirente.
+    \end{enumerate}{}
+    \item {\em Disputa con moderatore}: In qualsiasi momento dopo che l'acquirente ha inviato un ordine e prima che l'indirizzo multisig venga svuotato, il venditore o l'acquirente possono decidere di coinvolgere il moderatore. Party\_A è chi solleva la disputa, Party\_B è il convenuto.\footnote{Il nostro design per la risoluzione delle dispute presume buona fede. Attori non collaborativi renderanno il processo più complicato.}    
+    \begin{enumerate}
+        \item {\em Party\_A contatta il moderatore}: Party\_A inizializza due transazioni (per pagamento o rimborso), questa volta pensate per la firma Party\_A-moderatore, e le invia al moderatore con tutte le informazioni necessarie per ricostruire l’indirizzo multisig (chiavi base, chiave pubblica del segreto condiviso Party\_A-Party\_B, chiave privata di visualizzazione) e leggere il saldo (partial key images e prove).        
+        \item {\em Il moderatore gestisce la disputa}
+        \begin{enumerate}
+            \item {\em Il moderatore prende in carico la disputa}: Riconosce di aver ricevuto la disputa, crea le transazioni parziali dai dati ricevuti, e le invia a Party\_A. Notifica anche Party\_B e inizia due transazioni con lui nel caso Party\_A non collabori con il verdetto finale.
+            \item {\em Il moderatore valuta il caso}: Analizza le prove disponibili e può interagire con le parti per ottenere ulteriori informazioni. Potrebbe tentare una mediazione.
+            \item {\em La disputa si conclude}: Le parti possono risolvere autonomamente oppure il moderatore emette un verdetto che comunica a entrambi.
+        \end{enumerate}{}
+        \begin{itemize}
+            \item Nota: Se la parte convenuta deve ricevere fondi ma non ha fornito un indirizzo, il moderatore può contattarla anche dopo la chiusura della disputa per completare il trasferimento.
+        \end{itemize}{}        
+        \item {\em Party\_A o B accetta il verdetto}: Se nessuna transazione Party\_A-Party\_B è stata finalizzata, la disputa si conclude con la decisione del moderatore.
+        \begin{enumerate}
+            \item {\em Party\_A accetta}
+            \begin{enumerate}
+                \item Party\_A completa la propria firma parziale sulla transazione del verdetto e la invia al moderatore.
+                \item Il moderatore completa la firma e invia la transazione alla rete.
+            \end{enumerate}{}
+            \item {\em Party\_B accetta}
+            \begin{enumerate}
+                \item Party\_B crea una transazione parziale basata sul verdetto inizializzato dal moderatore, e la invia al moderatore. Questo può avvenire anche prima che il verdetto sia definito, preparando entrambe le possibilità.
+                \item Il moderatore firma parzialmente la transazione e la rimanda a Party\_B.
+                \item Party\_B completa la firma e invia la transazione alla rete. Invia l’hash della transazione al moderatore.
+            \end{enumerate}{}
+        \end{enumerate}{}
+        \item {\em Il moderatore chiude la disputa}: Riassume la disputa e la sua risoluzione, inviando il report a venditore e acquirente.
+    \end{enumerate}{}
+\end{enumerate}{}
+
+In seguito sono trattate quattro principali ottimizzazioni progettuali.
+
+\subsubsection*{Moderatori Preselezionati}
+
+Selezionando i moderatori in anticipo, i venditori possono creare un segreto condiviso con ciascuno di essi per ogni loro prodotto e pubblicarne la chiave pubblica insieme alle informazioni del prodotto.\footnote{È importante notare che questi indirizzi multisig sono comunque resistenti ai test di aggregazione delle chiavi, poiché i segreti condivisi con l'acquirente sono sconosciuti agli osservatori.} In questo modo gli acquirenti possono costruire l'indirizzo multisig completo in un solo passaggio, non appena decidono di acquistare qualcosa, in linea con il requisito della `vendita offline'. Preselezionare più moderatori consente agli acquirenti di scegliere quello di cui si fidano di più.
+
+Gli acquirenti possono anche, se non si fidano dei moderatori accettati da un venditore, cooperare con un moderatore online di loro scelta per creare un indirizzo multisig utilizzando la chiave base del prodotto del venditore. Dopo aver ricevuto un ordine d'acquisto, il venditore può accettare quel nuovo moderatore oppure rifiutare la vendita.\footnote{Per praticità, un servizio di escrow potrebbe essere `sempre online', e invece di usare moderatori preselezionati, tutti gli indirizzi multisig 2-di-3 vengono creati attivamente con tale servizio al momento dell'ordine. Un'altra possibilità è usare multisig annidato (Sezione \ref{sec:general-key-families}), dove il moderatore preselezionato è in realtà un gruppo multisig 1-di-N. In questo modo, ogni volta che sorge una disputa, un qualsiasi moderatore disponibile di quel gruppo può intervenire. La realizzazione di questa opzione richiederebbe probabilmente uno sforzo di sviluppo considerevole.}
+
+Si suppone che il desiderio reciproco, da parte di acquirenti e venditori, di buoni moderatori porti nel tempo alla creazione di una gerarchia di moderatori organizzata in base alla qualità e all'equità del servizio fornito. I moderatori di qualità inferiore o con minore reputazione probabilmente guadagnerebbero meno o gestirebbero transazioni meno significative.\footnote{Non ci è chiaro quale sia il metodo di finanziamento migliore, o più probabile, per i moderatori. Forse riceveranno un compenso fisso o una percentuale per ogni transazione moderata o per ogni transazione in cui vengono aggiunti come moderatori (e poi, se il compenso non è previsto nelle transazioni parziali originali, potrebbero rifiutarsi di collaborare in caso di disputa), oppure utenti e/o venditori e/o piattaforme di marketplace potrebbero stipulare contratti con loro.}
+
+\subsubsection*{Sottoindirizzi e ID dei Prodotti}
+
+I venditori creano una nuova chiave base per ogni linea di prodotti o ID, e tali chiavi vengono usate per costruire indirizzi multisig 2-di-3.\footnote{Questa chiave base è utilizzata anche per gli acquisti 1-di-2 multisig. Riteniamo importante non esporre la chiave di spesa privata nel canale di comunicazione, quindi usare un segreto condiviso tra acquirente e venditore ha molto senso.} Quando i venditori evadono un ordine d'acquisto, creano un sottoindirizzo unico per la ricezione dei fondi, che può essere usato per abbinare gli ordini d'acquisto ai pagamenti ricevuti.
+
+Il requisito dei `pagamenti basati su ordine d'acquisto' è soddisfatto in modo efficiente, soprattutto perché i fondi inviati a sottoindirizzi differenti sono accessibili in modo immediato dallo stesso portafoglio (vedi Sezione \ref{sec:subaddresses}).
+
+\subsubsection*{Transazioni Parziali Anticipate}
+
+Le transazioni multisig richiedono più passaggi rispetto a quelle tradizionali, quindi è consigliato inizializzarle il prima possibile. Per comodità dell'utente, le transazioni parziali raramente usate (ad es. rimborsi) possono essere create in anticipo, in modo da essere immediatamente disponibili per la firma qualora si presenti la necessità.
+
+\subsubsection*{Accesso Condizionale del Moderatore}
+
+Per motivi di efficienza e privacy, i moderatori hanno bisogno di accedere ai dettagli di una transazione solo in caso di disputa. Per ottenere ciò, rendiamo la chiave di visualizzazione privata del multisig un hash del segreto condiviso privato tra acquirente e venditore: $k^{v,grp}_{purchase-order} = \mathcal{H}_n(T_{mv},k^{sh,\textrm{2x3}}_{AB})$, dove $T_{mv}$ è il separatore di dominio per la chiave di visualizzazione del marketplace, e A e B corrispondono rispettivamente a venditore e acquirente, e $k^{sh,\textrm{2x3}}_{AB} = \mathcal{H}_n(k^{base}_{A}*k^{base}_{B} G)$. Estendiamo ciò che questa chiave può `visualizzare' includendo anche il transcript della comunicazione tra acquirente e venditore. In altre parole, la chiave di cifratura della comunicazione è $k^{ce}_{purchase-order} = \mathcal{H}_n(T_{me},k^{v,grp}_{purchase-order})$ ($T_{me}$ è il separatore di dominio per la chiave di cifratura del marketplace).\footnote{Separare la chiave di visualizzazione dalla chiave di cifratura consente di concedere solo i diritti di visualizzazione del registro delle comunicazioni, senza dare accesso alla cronologia delle transazioni dell'indirizzo multisig.}\footnote{Questo metodo è usato anche per indirizzi multisig 1-di-2.}
+
+I moderatori ottengono accesso alle comunicazioni tra acquirente e venditore, e la possibilità di autorizzare pagamenti, solo quando una delle parti rilascia loro la chiave di visualizzazione.\footnote{È importante che i moderatori verifichino che il registro delle comunicazioni ricevuto non sia stato alterato. Un modo possibile è far includere a ciascun cofirmatario un hash firmato del registro dei messaggi ogni volta che inviano un nuovo messaggio. I moderatori possono esaminare il botta e risposta, e la serie di hash registrati, per identificare eventuali discrepanze. Questo aiuterebbe anche i cofirmatari a individuare messaggi che non sono stati trasmessi correttamente, o a creare prove che certi messaggi sono stati effettivamente ricevuti da determinati firmatari.}
+
+Inoltre, i venditori possono verificare che l'host del marketplace (che potrebbe anche essere l’unico moderatore disponibile, a seconda di come viene implementato questo concetto) non stia effettuando un attacco MITM (`man in the middle') nelle loro conversazioni con i clienti (cioè fingendo di essere l’acquirente o il venditore) controllando che le chiavi base pubblicate per ciascun prodotto corrispondano a quelle effettivamente visualizzate. Poiché la chiave base dell’acquirente, che viene usata per creare l’indirizzo multisig, fa anche parte della chiave di cifratura, un host malevolo avrebbe notevoli difficoltà a orchestrare un attacco MITM.

@@ -1,0 +1,315 @@
+\chapter{Prove di Conoscenza Relative alle Transazioni Monero}
+\label{chapter:tx-knowledge-proofs}
+%original draft by Sarang Noether, Ph.D.
+
+\iffalse
+https://github.com/monero-project/monero/pull/6329/files
+
+https://monero.stackexchange.com/questions/8122/what-is-the-spendproofv1-or-outproofv1-in-the-details-of-a-sent-transa
+
+https://monero.stackexchange.com/questions/9991/how-does-the-get-reserve-proof-command-work
+
+https://github.com/monero-project/research-lab/issues/68
+\fi
+
+Monero è una valuta e, come qualsiasi valuta, i suoi usi possono essere complessi. Dalla contabilità aziendale, al mercato di scambio, all’arbitrato legale, diverse parti possono essere interessate e voler conoscere informazioni dettagliate sulle transazioni effettuate.
+
+Com'è possibile stabilire con certezza che il denaro ricevuto proviene da una persona specifica? O dimostrare di aver effettivamente inviato un certo output o transazione a qualcuno nonostante affermazioni contrarie? I mittenti e i destinatari nel registro pubblico di Monero sono \emph{opachi}. Come si può dimostrare di possedere una certa somma di denaro, senza compromettere le chiavi private? Gli importi in Monero sono completamente nascosti agli osservatori.
+
+In questo capitolo verranno trattati metodi per produrre diverse tipologie di prove sulle transazioni, alcune delle quali sono implementate in Monero e disponibili con strumenti integrati nel wallet. Inoltre, verrà presentato un quadro di riferimento per verificare il saldo completo posseduto da una persona o organizzazione, senza richiedere la divulgazione di informazioni sulle transazioni future che potrebbero effettuare.
+
+
+
+\section{Prove di Transazione Monero}
+\label{sec:proofs-monero-proofs}
+
+Le \emph{prove di transazione} Monero sono in continua fase di sviluppo e aggiornamento \cite{sarang-txproofs-updates-issue}. Le prove attualmente implementate fanno tutte riferimento alla `versione 1', e non includono la separazione del dominio. In questo documento saranno descritte solo le prove di transazione più avanzate, siano esse già implementate, previste per le prossime versioni \cite{sarang-txproofs-v2-update-pr}, o ipotetiche implementazioni che potrebbero essere attuate (Sezioni \ref{subsec:proofs-owned-output-spent-unspentproof} \cite{unspent-proof-issue-68} e \ref{subsec:proofs-address-subaddress-correspond-subaddressproof}).
+
+
+\subsection{Prove di Transazione Monero Multi-Base}
+\label{subsec:proofs-multi-base-monero}
+
+Ci sono alcuni dettagli di cui è necessario essere consapevoli procedendo nella lettura di questo capitolo. La maggior parte delle prove di transazione Monero coinvolge l'utilizzo di prove multi-base (Sezione \ref{sec:proofs-discrete-logarithm-multiple-bases}). Dove necessario, il separatore di dominio sarà specificato come $T_{txprf2} = \mathcal{H}_n(``\textrm{TXPROOF\_V2}")$.\footnote{Come nella Sezione \ref{sec:CLSAG}, le funzioni hash dovrebbero essere separate per dominio tramite prefissi etichettati. L’implementazione attuale delle prove di transazione Monero non ha separazione di dominio, quindi tutti i tag in questo capitolo descrivono caratteristiche {\em non} ancora implementate.} Il messaggio firmato\marginnote{src/wallet/ wallet2.cpp {\tt get\_tx\_ proof()}} è solitamente (a meno che non sia specificato diversamente) $\mathfrak{m} = \mathcal{H}_n(\texttt{tx\_hash, \texttt{message}})$, dove {\tt tx\_hash} è l’ID della transazione presa in considerazione (Sezione \ref{subsec:transaction-id}), e {\tt message} è un messaggio opzionale che dimostratori o terze parti possono fornire per assicurare la legittimità dell'autore della prova, ovvero che non sia \emph{rubata}.
+
+Le prove sono codificate in base-58, uno schema di codifica binario-testo (binary-to-text) introdotto per la prima volta per Bitcoin \cite{base-58-encoding}. La verifica di queste prove prevede sempre prima la decodifica dalla base-58 al formato binario. Si noti che i verificatori necessitano anche dell’accesso alla blockchain, così da poter usare i riferimenti all’identificativo della transazione per ottenere informazioni come gli indirizzi one-time.\footnote{Gli ID delle transazioni sono solitamente comunicati separatamente dalle prove.}
+\\
+
+La struttura del prefisso delle chiavi nelle prove di transazione è piuttosto sgangherata, dovuto in parte all’accumulo di aggiornamenti non ancora riorganizzati. Le sfide per le prove \emph{2-base} riferite alla `versione 2' sono assemblate nel seguente formato:\vspace{.175cm}
+\[c = \mathcal{H}_n(\mathfrak{m}\textrm{, public key 2, proof part 1, proof part 2, $T_{txprf2}$, public key 1, base key 2, base key 1})\]
+Se la `base key 1' corrisponde a $G$ allora la sua posizione nella sfida viene riempita con 32 byte a zero.
+
+
+\subsection{Prova di Creazione di Input di Transazione ({\tt SpendProofV1})}
+\label{subsec:proofs-input-creation-spendproof}
+
+Si supponga di voler dimostrare di aver effettuato una transazione. Chiaramente, riproducendo la firma di un input di transazione su un nuovo messaggio, un verificatore non potrebbe dubitare in alcun modo della legittimità del messaggio originale. Riprodurre {\em tutte} le firme degli input di una transazione significa che l'iniziatore deve aver creato l’intera transazione (Sezione \ref{full-signature}), o almeno averla finanziata completamente.\footnote{Come vedremo nel Capitolo \ref{chapter:txtangle}, chi effettua la firma di un input non necessariamente ha prodotto tutte le firme degli input.}
+
+Una cosiddetta \emph{prova di spesa} (SpendProof)\marginnote{src/wallet/ wallet2.cpp {\tt get\_spend\_ proof()}} contiene le firme riprodotte per tutti gli input di una transazione. È importante tenere conto che le firme ad anello delle SpendProof riutilizzano i membri originali per evitare di identificare il vero firmatario tramite intersezioni dell’anello.
+
+Le SpendProof sono implementate in Monero, e al fine di codificarne una per la trasmissione ai verificatori, il dimostratore concatena la stringa prefisso ``{\tt SpendProofV1}'' con la lista delle firme. Si noti che la stringa prefisso non è in base-58 e non deve essere codificata/decodificata, poiché il suo scopo è dedito alla leggibilità umana.%e il messaggio firmato?
+
+\subsubsection*{Le SpendProof}
+
+Inaspettatamente, le SpendProof non usano MLSAG, ma piuttosto lo schema originale di ring signature di Monero \marginnote{src/crypto/ crypto.cpp {\tt generate\_ ring\_signa- ture()}} che veniva usato nel primissimo protocollo di transazione (pre-RingCT) \cite{cryptoNoteWhitePaper}. Di seguito sono elencati i passaggi per produrre una prova di spesa:
+
+\begin{enumerate}
+	\item Calcolare l’immagine della chiave \(\tilde{K} = k^o_\pi \mathcal{H}_p(K^o_\pi)\).
+
+	\item Generare un numero casuale \(\alpha \in_R \mathbb{Z}_l\) e numeri casuali \(c_i, r_i \in_R \mathbb{Z}_l\) per \(i \in \{1, 2, ..., n\}\) escludendo però \(i = \pi\).
+
+	\item Calcolare
+	\[c_{tot} = \mathcal{H}_n(\mathfrak{m},[r_1 G + c_1 K^o_1],[r_1 \mathcal{H}_p(K^o_1) + c_1 \tilde{K}],...,[\alpha G],[\alpha \mathcal{H}_p(K^o_{\pi})],...,\textrm{ecc.})\]
+
+	\item Definire la sfida reale
+	\[c_{\pi} = c_{tot} - \sum^{n}_{i=1,i\neq \pi} c_i\]
+
+	\item Definire \(r_{\pi} = \alpha - c_{\pi}*k^o_{\pi} \pmod l\).
+\end{enumerate}
+
+La firma sarà dunque $\sigma = (c_1, r_1,c_2,r_2,...,c_n,r_n)$.
+
+\subsubsection*{Verifica}
+
+Per verificare\marginnote{src/wallet/ wallet2.cpp {\tt check\_spe- nd\_proof()}} una SpendProof su una transazione specifica, il verificatore deve controllare che tutte le ring signature siano valide usando le informazioni trovate nella transazione presa in considerazione (ad esempio immagini chiave e offset degli output per ottenere gli indirizzi one-time da altre transazioni).
+
+\begin{enumerate}
+	\item Calcolare
+	\[c_{tot} = \mathcal{H}_n(\mathfrak{m},[r_1 G + c_1 K^o_1],[r_1 \mathcal{H}_p(K^o_1) + c_1 \tilde{K}],...,[r_n G + c_n K^o_n],[r_n \mathcal{H}_p(K^o_n) + c_n \tilde{K}])\]
+
+	\item Verificare che
+	\[c_{tot} \stackrel{?}{=} \sum^{n}_{i=1} c_i\]
+\end{enumerate}
+
+\subsubsection*{Perché Funziona}
+
+Si noti come questo schema sia identico al bLSAG (Sezione \ref{blsag_note}) quando vi è un solo membro nell’anello. Per aggiungere un membro fittizio, invece di passare la sfida $c_{\pi+1}$ per creare un nuovo hash di sfida, il membro viene aggiunto all’hash originale. Poiché l’equazione seguente\vspace{.175cm}
+\[c_{s} = c_{tot} - \sum^{n}_{i=1,i\neq s} c_i\]
+
+vale banalmente per ogni indice $s$, un verificatore non avrà modo di identificare la vera sfida. Inoltre, senza la conoscenza di \(k^o_{\pi}\), il dimostratore non sarebbe mai stato in grado di definire correttamente $r_{\pi}$ (tranne che con probabilità trascurabile).
+
+
+\subsection{Prova di Creazione di Output di Transazione ({\tt OutProofV2})}
+\label{subsec:proofs-output-creator-outproof}
+
+Si supponga di aver inviato denaro a qualcuno (un output) e di volerlo dimostrare. Gli output di una transazione contengono essenzialmente tre campi: l’indirizzo del destinatario, la quantità inviata e la chiave privata della transazione. Le quantità sono cifrate, quindi sono necessari solo l’indirizzo e la chiave privata della transazione per cominciare. Chiunque cancelli o perda la propria chiave privata della transazione non potrà creare una OutProof, quindi in questo senso le OutProof sono le prove di transazione Monero meno affidabili.\footnote{Possiamo pensare a una `OutProof' come alla dimostrazione che un output è `uscente' dal dimostratore. Le corrispondenti `InProof' (Sezione \ref{subsec:proofs-output-ownership-inproof}) mostrano output `entranti' all’indirizzo del dimostratore.}
+
+L'obiettivo è dimostrare che l’indirizzo one-time è stato creato a partire dall’indirizzo del destinatario, e permettere ai verificatori di ricostruire l’impegno sull’output. È possibile produrre questa prova fornendo il segreto condiviso mittente-destinatario \(rK^v\), poi dimostrando di averlo creato e che corrisponde alla chiave pubblica della transazione e all’indirizzo del destinatario firmando una firma 2-base (Sezione \ref{sec:proofs-discrete-logarithm-multiple-bases}) sulle chiavi base \(G\) e \(K^v\). I verificatori possono usare il segreto condiviso per controllare il destinatario\marginnote{src/wallet/ wallet2.cpp {\tt check\_tx\_ proof()}} (Sezione \ref{sec:one-time-addresses}), decodificare la quantità (Sezione \ref{sec:pedersen_monero}) e ricostruire l’impegno dell’output (Sezione \ref{sec:pedersen_monero}). In questa sezione sono forniti tutti i dettagli che riguardano indirizzi standard e sottoindirizzi.
+
+\subsubsection*{Le OutProof}
+
+Di seguito sono elencati i passaggi da effettuare al fine di produrre\marginnote{src/crypto/ crypto.cpp {\tt generate\_ tx\_proof()}} una prova per un output diretto a un indirizzo \((K^{v},K^{s})\) o sottoindirizzo \((K^{v,i},K^{s,i})\), con chiave privata della transazione \(r\), dove il segreto condiviso mittente-destinatario è \(rK^v\). Si ricorda che la chiave pubblica della transazione viene memorizzata nei dati della transazione, dunque corrisponde a \(rG\) oppure a \(rK^{s,i}\) a seconda che la destinazione sia o meno un sottoindirizzo (Sezione \ref{sec:subaddresses}).
+
+\begin{enumerate}
+	\item Generare un numero casuale \(\alpha \in_R \mathbb{Z}_l\), e calcolare
+	\begin{enumerate}
+	    \item {\em Indirizzo normale}: \(\alpha G\) e \(\alpha K^v\)
+	    \item {\em Sottoindirizzo}: \(\alpha K^{s,i}\) e \(\alpha K^{v,i}\)
+	\end{enumerate}
+	\item Calcolare la sfida
+	\begin{enumerate}
+	    \item {\em Indirizzo normale}:\footnote{Qui il valore ‘0’ è una codifica di 32 byte di zeri.}
+	    \[c = \mathcal{H}_n(\mathfrak{m},[rK^v], [\alpha G], [\alpha K^v], [T_{txprf2}], [rG], [K^v], [0])\]
+	    \item {\em Sottoindirizzo}:
+	    \[c = \mathcal{H}_n(\mathfrak{m},[rK^{v,i}], [\alpha K^{s,i}], [\alpha K^{v,i}], [T_{txprf2}], [rK^{s,i}], [K^{v,i}], [K^{s,i}])\]
+	\end{enumerate}
+	\item Definire la risposta\footnote{A causa del numero limitato di simboli disponibili, è stata usato con dispiacere la dicitura \(r\) sia per le risposte che per la chiave privata della transazione. Il pedice `resp' per `response' sarà usato per differenziare i due quando necessario.} \(r^{resp} = \alpha - c*r\).
+	\item La firma prodotta è \(\sigma^{outproof} = (c, r^{resp})\).
+\end{enumerate}{}
+
+Un dimostratore\marginnote{src/wallet/ wallet2.cpp {\tt get\_tx\_ proof()}} può generare una serie di OutProof ed inviarle successivamente tutte insieme a un verificatore. Egli concatena la stringa prefisso ``{\tt OutProofV2}'' con una lista di prove, dove ogni elemento (codificato in base-58) consiste nel segreto condiviso tra mittente e destinatario $r K^v$ (o $r K^{v,i}$ per un sottindirizzo), e la sua corrispondente $\sigma^{outproof}$. Supponendo che il verificatore conosca l’indirizzo appropriato per ciascuna prova, la verifica si svolge come segue:
+
+\subsubsection*{Verifica}
+
+\begin{enumerate}
+    \item Calcolare la sfida\marginnote{src/crypto/ crypto.cpp {\tt check\_tx\_ proof()}}
+    \begin{enumerate}
+        \item {\em Indirizzo normale}:\vspace{.145cm}
+	    \[c' = \mathcal{H}_n(\mathfrak{m},[rK^v], [r^{resp} G + c*r G], [r^{resp} K^v + c*r K^v], [T_{txprf2}], [rG], [K^v], [0])\]
+	    \item {\em Sottindirizzo}:\vspace{.16cm}
+	    \[c' = \mathcal{H}_n(\mathfrak{m},[rK^{v,i}], [r^{resp} K^{s,i} + c*r K^{s,i}], [r^{resp} K^{v,i} + c*r K^{v,i}], [T_{txprf2}], [rK^{s,i}], [K^{v,i}], [K^{s,i}])\]
+    \end{enumerate}
+    \item Se $c = c'$ allora il dimostratore conosce $r$, e $rK^v$ è un segreto condiviso legittimo tra $r G$ e $K^v$ (eccetto che con probabilità trascurabili).
+    \item Il\marginnote{src/wallet/ wallet2.cpp {\tt check\_tx\_ key\_hel- per()}} verificatore deve verificare che l’indirizzo del destinatario fornito possa essere utilizzato per creare un indirizzo one-time dalla transazione presa in considerazione (è lo stesso calcolo per indirizzi normali e sottindirizzi)
+    \[K^s \stackrel{?}{=} K^o_t - \mathcal{H}_n(r K^v,t)\]
+    \item Deve anche decifrare l’ammontare dell’output $b_t$, calcolare la maschera dell’output $y_t$, e tentare di ricostruire il corrispondente commitment dell’output\footnote{Una firma OutProof valida non implica necessariamente che il destinatario considerato sia il vero destinatario. Un dimostratore malevolo potrebbe generare una chiave di visualizzazione casuale $K'^v$, calcolare $K'^s = K^o - \mathcal{H}_n(rK'^v,t)*G$, e fornire $(K'^v,K'^s)$ come destinatario nominale. Ricalcolando il commitment dell’output, i verificatori possono essere più sicuri che l’indirizzo del destinatario in questione sia legittimo. Tuttavia, dimostratore e destinatario potrebbero collaborare per codificare il commitment usando $K'^v$, mentre l’indirizzo one-time usa $(K^v,K^s)$. Poiché il destinatario dovrebbe conoscere la chiave privata $k'^v$ (supponendo che l’output sia ancora spendibile), l’utilità di tale inganno è discutibile. Perché il destinatario non userebbe direttamente $(K'^v,K'^s)$ (o un altro indirizzo monouso) per tutto l’output? Poiché il calcolo di $C^b_t$ è legato al destinatario, consideriamo adeguato il processo di verifica OutProof descritto. In altre parole, il dimostratore non può ingannare i verificatori senza coordinarsi con il destinatario.}\vspace{.175cm}
+    \[C^b_t \stackrel{?}{=} y_t G + b_t H\]
+\end{enumerate}
+
+
+\subsection{Dimostrare la Proprietà di un Output ({\tt InProofV2})}
+\label{subsec:proofs-output-ownership-inproof}
+
+Una OutProof dimostra che l'autore di una transazione ha inviato un output a un indirizzo, mentre un InProof dimostra che un output è stato ricevuto a un certo indirizzo. È essenzialmente l’altra `faccia della medaglia’ del segreto condiviso tra mittente e destinatario $r K^v$. Questa volta l'utente dimostra la conoscenza di $k^v$ relativa a $K^v$, e, in combinazione con la chiave pubblica della transazione $r G$, costruisce il segreto condiviso $k^v*r G$.
+
+Una volta che un verificatore ha $r K^v$, può controllare se l’indirizzo one-time corrispondente è di proprietà dell’indirizzo del dimostratore con\marginnote{src/wallet/ wallet2.cpp {\tt check\_tx\_ proof()}} $K^o - \mathcal{H}_n(k^v*rG,t)*G \stackrel{?}{=} K^s$ (Sezione \ref{sec:multi_out_transactions}). Producendo una InProof per tutte le chiavi pubbliche di transazione sulla blockchain, un dimostratore rivelerà tutti gli output di sua proprietà.
+
+Dare direttamente la chiave di visualizzazione a un verificatore porterebbe allo stesso risultato voluto, ma una volta ottenuta la chiave, il verificatore sarebbe in grado di identificare la proprietà di output da creare in futuro. Con gli InProof il dimostratore può mantenere il controllo delle sue chiavi private, al costo del tempo necessario a dimostrare (e poi verificare) ogni output come posseduto o meno.
+
+\subsubsection*{L’InProof}
+
+Una InProof si costruisce nello stesso modo di una OutProof\marginnote{src/crypto/ crypto.cpp {\tt generate\_ tx\_proof()}}, cambiano solo le chiavi base $\mathcal{J} = \{G, r G\}$, le chiavi pubbliche $\mathcal{K} = \{K^v, r K^{v}\}$, e la chiave di firma che adesso è $k^v$ invece di $r$. Mostreremo solo il passo di verifica per chiarire il significato. Si noti che l’ordine del prefisso delle chiavi cambia ($r G$ e $K^v$ si scambiano di posto) per coincidere con il diverso ruolo di ciascuna chiave.
+
+Più di una InProof, relative a vari output posseduti dallo stesso indirizzo, possono essere inviate tutte insieme al verificatore.\marginnote{src/wallet/ wallet2.cpp {\tt get\_tx\_ proof()}} Sono preceduti dalla stringa ``{\tt InProofV2}'', e ogni elemento (codificato in base-58) contiene il segreto condiviso mittente-destinatario $r K^v$ (o $r K^{v,i}$), e la corrispondente $\sigma^{inproof}$.
+
+\subsubsection*{Verifica}
+
+\begin{enumerate}
+    \item Calcolare la sfida\marginnote{src/crypto/ crypto.cpp {\tt check\_tx\_ proof()}}
+    \begin{enumerate}
+        \item {\em Indirizzo normale}:\vspace{.145cm}
+	    \[c' = \mathcal{H}_n(\mathfrak{m},[rK^v], [r^{resp} G + c*K^v], [r^{resp}*r G + c*k^v*r G], [T_{txprf2}], [K^v], [rG], [0])\]
+	    \item {\em Sottindirizzo}:\vspace{.16cm}
+	    \[c' = \mathcal{H}_n(\mathfrak{m},[rK^{v,i}], [r^{resp} K^{s,i} + c*K^{v,i}], [r^{resp}*r K^{s,i} + c*k^v*r K^{s,i}], [T_{txprf2}], [K^{v,i}], [r K^{s,i}], [K^{s,i}])\]
+    \end{enumerate}
+    \item Se $c = c'$ allora il dimostratore conosce $k^v$, e $k^v*r G$ è un segreto condiviso legittimo tra $K^v$ e $r G$ (salvo probabilità trascurabili).
+\end{enumerate}
+
+\subsubsection*{Dimostrare la Proprietà Completa con la Chiave dell’Indirizzo One-Time}
+
+Mentre una InProof dimostra che un indirizzo one-time è stato costruito con un indirizzo specifico (salvo probabilità trascurabili), ciò non significa necessariamente che il dimostratore possa {\em spendere} il relativo output. Solo chi può spendere un output ne è effettivamente proprietario.
+
+Dimostrare la proprietà, una volta completata una InProof, è semplice come firmare un messaggio con la chiave di spesa.\footnote{La possibilità di fornire una firma del genere direttamente non sembra essere disponibile in Monero, anche se, come vedremo, le ReserveProof (Sezione \ref{subsec:proofs-minimum-balance-reserveproof}) le includono.}
+
+
+\subsection{Dimostrare che un Output Posseduto Non è Stato Speso in una Transazione (UnspentProof)}
+\label{subsec:proofs-owned-output-spent-unspentproof}
+
+Potrebbe sembrare che dimostrare se un output è stato speso o meno sia semplice come ricreare la sua key image con una prova multi-base su $\mathcal{J} = \{G,\mathcal{H}_p(K^o)\}$ e $\mathcal{K} = \{K^o,\tilde{K}\}$. Sebbene ciò funzioni questo comporta che i verificatori devono conoscere la key image, il che rivela anche quando un output non speso viene speso {\em in futuro}.
+
+In realtà è possibile dimostrare che un output non è stato speso in una specifica transazione senza rivelare la key image. Inoltre, è possibile dimostrare che è attualmente non speso {\em punto e basta}, estendendo questa UnspentProof \cite{unspent-proof-issue-68} a «tutte le transazioni in cui (l'output) è stato incluso come membro dell’anello».\footnote{Le UnspentProof non sono state implementate in Monero.}
+
+Più precisamente, la UnspentProof afferma che una data key image di una transazione sulla blockchain corrisponde, o meno, a uno specifico indirizzo one-time appartenente al suo anello corrispondente. Per inciso, come vedremo, le UnspentProof vanno di pari passo con le InProof.
+
+\subsubsection*{Preparazione di una UnspentProof}
+
+Il verificatore di una UnspentProof deve conoscere $r K^v$, il segreto condiviso mittente-destinatario per un output posseduto dato con indirizzo one-time $K^o$ e la chiave pubblica della transazione $r G$. Egli o conosce la chiave di visualizzazione $k^v$, che gli ha permesso di calcolare $k^v*r G$ e verificare che $K^o - \mathcal{H}_n(k^v*rG,t)*G \stackrel{?}{=} K^s$, quindi sa che l’output testato appartiene al dimostratore (ricordare la Sezione \ref{sec:one-time-addresses}), oppure il dimostratore ha fornito $r K^v$. Qui entrano in gioco le InProof, poiché con una InProof il verificatore può essere sicuro che $r K^v$ provenga legittimamente dalla chiave di visualizzazione del dimostratore e corrisponda a un output posseduto, senza apprendere la chiave privata di visualizzazione.
+
+Prima di verificare una UnspentProof, il verificatore apprende la key image da testare $\tilde{K}_?$ e controlla che il suo anello corrispondente includa l’indirizzo one-time $K^o$ dell’output posseduto dal dimostratore. Quindi calcola l’immagine parziale di `spesa' $\tilde{K}^s_?$.\vspace{.175cm}
+\[\tilde{K}^s_? = \tilde{K}_? - \mathcal{H}_n(r K^v,t)*\mathcal{H}_p(K^o)\]
+
+Se la key image testata è stata creata da $K^o$ allora il punto risultante sarà $\tilde{K}^s_? = k^s*\mathcal{H}_p(K^o)$.
+
+\subsubsection*{Le UnspentProof}
+
+Il dimostratore crea due prove multi-base (ricordare la Sezione \ref{sec:proofs-discrete-logarithm-multiple-bases}). Il suo indirizzo, che possiede l’output in questione, è $(K^v, K^s)$ oppure $(K^{v,i}, K^{s,i})$.\footnote{Le UnspentProof si costruiscono allo stesso modo sia per sottindirizzi che per indirizzi normali. È richiesta la chiave completa di spesa di un sottindirizzo, ad esempio $k^{s,i} = k^s + \mathcal{H}_n(k^v,i)$ (Sezione \ref{sec:subaddresses}).}
+
+\begin{enumerate}
+    \item Una prova a 3 basi, dove la chiave di firma è $k^s$, e\vspace{.175cm}
+    \begin{align*}
+        \mathcal{J}^{unspent}_3 &= \{[G], [K^s], [\tilde{K}^s_?]\}\\
+        \mathcal{K}^{unspent}_3 &= \{[K^s], [k^s*K^s], [k^s*\tilde{K}^s_?]\}
+    \end{align*}
+    \item Una prova a 2 basi, dove la chiave di firma è $k^s*k^s$, e\vspace{.175cm}
+    \begin{align*}
+        \mathcal{J}^{unspent}_2 &= \{[G], [\mathcal{H}_p(K^o)]\}\\
+        \mathcal{K}^{unspent}_2 &= \{[k^s*K^s], [k^s*k^s*\mathcal{H}_p(K^o)]\}
+    \end{align*}
+\end{enumerate}
+
+Insieme alle prove $\sigma^{unspent}_3$ e $\sigma^{unspent}_2$, il dimostratore si assicura di comunicare le chiavi pubbliche $k^s*K^s$, $k^s*\tilde{K}^s_?$ e $k^s*k^s*\mathcal{H}_p(K^o)$.
+
+\subsubsection*{Verifica}
+
+\begin{enumerate}
+    \item Verificare che $\sigma^{unspent}_3$ e $\sigma^{unspent}_2$ siano legittime.
+    \item Assicurarsi che la stessa chiave pubblica $k^s*K^s$ sia stata usata in entrambe le prove.
+    \item Verificare se $k^s*\tilde{K}^s_?$ e $k^s*k^s*\mathcal{H}_p(K^o)$ siano uguali. Se lo sono, l'output è speso, e se no è non speso (eccetto con probabilità trascurabile).
+\end{enumerate}{}
+
+\subsubsection*{Perché Funziona}
+
+Questo approccio apparentemente tortuoso impedisce al verificatore di apprendere $k^s*H_p(K^o)$ per un output non speso, che potrebbe usare in combinazione con $r K^v$ per calcolare la sua immagine chiave reale, pur lasciandolo fiducioso che l'immagine chiave testata non corrisponda a quell'output.
+
+La prova $\sigma^{unspent}_2$ può essere riutilizzata per qualsiasi numero di UnspentProof che coinvolgono lo stesso output, anche se se fosse stato effettivamente speso ne è necessaria solo una (cioè le UnspentProof possono essere usate anche per dimostrare che un output è speso). Produrre UnspentProof su tutte le firme ad anello in cui un dato output non speso è stato referenziato non dovrebbe essere computazionalmente costoso. È probabile che con il passare del tempo, un output, venga incluso come esca in circa 11 (dimensione attuale dell'anello) anelli diversi.
+
+
+\subsection{Provare che un Indirizzo ha un Saldo Non Speso Minimo ({\tt ReserveProofV2})}
+\label{subsec:proofs-minimum-balance-reserveproof}
+
+Nonostante il problema di privacy che deriva dal rivelare l'immagine chiave di un output quando non è ancora stato speso, è comunque qualcosa in qualche modo utile e le \emph{prove di riserva} sono state implementate in Monero \cite{ReserveProof-pull-request-3027} prima che le UnspentProof fossero inventate \cite{unspent-proof-issue-68}. Le cosiddette `ReserveProof'\marginnote{src/wallet/ wallet2.cpp {\tt get\_rese- rve\_proof()}} di Monero vengono utilizzate per dimostrare che un indirizzo possiede una quantità minima di denaro creando immagini chiave per alcuni output non spesi.
+
+Più specificamente, dato un saldo minimo, il dimostratore trova abbastanza output non spesi per coprirlo, dimostra la proprietà con le InProof, crea immagini chiave per essi e dimostra che sono legittimamente basate su quegli output con prove a 2 basi (usando un prefisso della chiave diverso), e poi dimostra la conoscenza delle chiavi private di spesa utilizzate con normali firme Schnorr (potrebbero essercene più di una se alcuni output sono posseduti da sotto-indirizzi diversi). Un verificatore può controllare che le immagini chiave non siano apparse sulla blockchain, e quindi i loro output devono essere non spesi.
+
+\subsubsection*{Le ReserveProof}%get_reserve_proof() wallet2.cpp
+
+Tutte le sotto-prove all'interno di una ReserveProof firmano un messaggio diverso rispetto ad altre prove (ad es. OutProof, InProof o SpendProof). Questa volta $\mathfrak{m} = \mathcal{H}_n(\texttt{message}, \texttt{address}, \tilde{K}^o_1, ..., \tilde{K}^o_n)$, dove {\tt address} è la forma codificata (vedi \cite{luigi-address}) dell'indirizzo standard del dimostratore $(K^v, K^s)$, e le immagini chiave corrispondono agli output non spesi da includere nella prova.
+
+\begin{enumerate}
+    \item Ogni output ha una InProof, che dimostra che l'indirizzo del dimostratore (o uno dei suoi sotto-indirizzi) possiede l'output.
+    \item L'immagine chiave di ogni output è firmata con una prova a 2 basi\marginnote{src/crypto/ crypto.cpp {\tt generate\_ ring\_signa- ture()}}, dove la sfida è calcolata come segue:%generate_ring_signature()
+    \[c = \mathcal{H}_n(\mathfrak{m}, [r G + c*K^o], [r \mathcal{H}_p(K^o) + c*\tilde{K}])\]
+    \item Ogni indirizzo (e sottoindirizzo) che possiede almeno un output ha una normale firma Schnorr (Sezione \ref{sec:signing-messages}), e la sfida è simile a (è la stessa per indirizzi normali e sotto-indirizzi)\marginnote{src/crypto/ crypto.cpp {\tt generate\_ signature()}}:
+    \[c = \mathcal{H}_n(\mathfrak{m}, K^{s,i}, [r G + c*K^{s,i}])\]
+\end{enumerate}{}
+
+Per poter inviare una ReserveProof a qualcun altro\marginnote{src/wallet/ wallet2.cpp {\tt get\_rese- rve\_proof()}}[.3cm], il dimostratore concatena la stringa prefisso ``{\tt ReserveProofV2}'' con due liste codificate in base-58 (ad es. ``{\tt ReserveProofV2}, lista 1, lista 2''). Ogni elemento della lista 1 è correlato a un output specifico e contiene il relativo hash di transazione (Sezione \ref{subsec:transaction-id}), l'indice dell'output in quella transazione (Sezione \ref{sec:multi_out_transactions}), il segreto condiviso $r K^v$, la sua immagine chiave, la sua InProof $\sigma^{inproof}$, e la prova dell'immagine chiave. Gli elementi della lista 2 sono gli indirizzi che possiedono quegli output insieme alle relative firme Schnorr.
+
+%in encoded data there are two lists of items, first list is per output [tx_hash, owned output's index, the shared secret r K^v, its key image, a \sigma^{inproof}, and a key image proof], second list is [subaddress, subaddress proof]
+%key image proof uses generate_ring_signature() on message m (InProof also uses this message, different from otherwise), basically a 1-member ring sig
+%subaddress proofs (basic schnorr signatures) includes a proof for main spend key if necessary! so ReserveProof not only reveals an unspent balance, but also means the prover fully owns them; however, this does not prove the subaddresses correspond with the original address
+
+\subsubsection*{Verifica}
+
+\begin{enumerate}
+    \item Controllare che le immagini chiave della ReserveProof non siano apparse nella blockchain.\marginnote{src/wallet/ wallet2.cpp {\tt check\_rese- rve\_proof()}}
+    \item Verificare la InProof per ogni output, e che uno degli indirizzi forniti nella lista 2 possieda ciascuno di essi.
+    \item Verificare le firme dell'immagine chiave a 2 basi.
+    \item Usare i segreti condivisi mittente-destinatario per decodificare gli importi degli output (Sezione \ref{sec:pedersen_monero}).
+    \item Controllare la firma di ogni indirizzo.
+\end{enumerate}{}
+
+Se la verifica va a buon fine, allora il dimostratore dispone di un importo non speso, pari ad almeno l'importo totale contenuto negli output della ReserveProof (eccetto con probabilità trascurabile).\footnote{Le ReserveProof, pur dimostrando la piena proprietà dei fondi, non includono prove che i dati sotto-indirizzi corrispondano effettivamente all'indirizzo standard del dimostratore.}
+
+
+
+\section{Framework di Audit Monero}
+\label{sec:proofs-monero-audit-framework}
+
+Negli USA la maggior parte delle aziende affronta audit annuali dei propri bilanci \cite{investopedia-audits}, che includono il conto economico, lo stato patrimoniale e il rendiconto finanziario. Di questi, i primi due riguardano in gran parte la contabilità interna di un'azienda, mentre l'ultimo riguarda ogni transazione che influisce su quanto denaro l'azienda ha attualmente. Le criptovalute sono denaro digitale, quindi qualsiasi audit del rendiconto finanziario di un utente di criptovaluta deve riguardare le transazioni memorizzate sulla blockchain.
+
+Il primo compito di una persona sottoposta ad audit è identificare tutti gli output che possiede attualmente (spesi e non spesi). Questo può essere fatto con le InProof utilizzando tutti i suoi indirizzi. Una grande azienda potrebbe avere una moltitudine di sotto-indirizzi, specialmente i rivenditori che operano nei mercati online (vedi Capitolo 
+\ref{chapter:escrowed-market}). La creazione di InProof su tutte le transazioni per ogni singolo sottoindirizzo potrebbe comportare enormi requisiti computazionali e di archiviazione sia per i dimostratori che per i verificatori.
+
+È possibile però creare InProof solo per gli indirizzi standard del dimostratore (su tutte le transazioni). L'auditor utilizza quei segreti condivisi mittente-destinatario per verificare se qualche output è posseduto dall'indirizzo principale del dimostratore o dai suoi sotto-indirizzi correlati. Richiamando la Sezione \ref{sec:subaddresses}, la chiave di visualizzazione di un utente è sufficiente per identificare tutti gli output posseduti dai sotto-indirizzi di un indirizzo.
+
+Per assicurarsi che il dimostratore non stia ingannando un auditor nascondendo l'indirizzo primario sotto ad alcuni dei suoi sotto-indirizzi, deve anche dimostrare che tutti i sotto-indirizzi corrispondono a uno dei suoi indirizzi standard conosciuti.
+
+
+\subsection{Dimostrare la Corrispondenza tra Indirizzo e Sottoindirizzo (SubaddressProof)}
+\label{subsec:proofs-address-subaddress-correspond-subaddressproof}
+
+Le SubaddressProof mostrano che la chiave di visualizzazione di un indirizzo primario può essere usata per identificare gli output posseduti da un dato sottoindirizzo.\footnote{Le SubaddressProof non sono state implementate in Monero.}
+
+\subsubsection*{Le SubaddressProof}
+%subaddress proof: base keys [G, K^{s,i}] public keys [K^v, K^{v,i}] signing key [k^v]
+Le SubaddressProof possono essere create in modo molto simile alle OutProof e alle InProof. Le chiavi base sono $\mathcal{J} = \{G, K^{s,i}\}$, le chiavi pubbliche $\mathcal{K} = \{K^v, K^{v,i}\}$, e la chiave di firma è $k^v$. Ancora una volta, mostriamo solo il passo di verifica per chiarire il concetto.
+
+\subsubsection*{Verifica}
+
+Un verificatore conosce l'indirizzo del dimostratore $(K^v, K^s)$, il sottoindirizzo $(K^{v,i}, K^{s,i})$, e ha la SubaddressProof $\sigma^{subproof} = (c,r)$. Dopodiché, effettua i seguenti passaggi:
+
+\begin{enumerate}
+    \item Calcolare la sfida\vspace{.175cm}
+	\[c' = \mathcal{H}_n(\mathfrak{m},[K^{v,i}], [r G + c*K^v], [r K^{s,i} + c*K^{v,i}], [T_{txprf2}], [K^v], [K^{s,i}], [0])\]
+    \item Se $c = c'$ allora il dimostratore conosce $k^v$ per $K^v$, e $K^{s,i}$ in combinazione con quella chiave di visualizzazione crea $K^{v,i}$ (eccetto con probabilità trascurabile).
+\end{enumerate}{}
+
+
+\subsection{Il Framework di Audit}
+\label{subsec:audit-framework}
+
+Ora siamo pronti ad apprendere il più possibile sulla cronologia delle transazioni di un utente.\footnote{Questo framework di audit non è completamente disponibile in Monero. Le SubaddressProof e le UnspentProof non sono implementate, le InProof non sono predisposte per l'ottimizzazione relativa ai sotto-indirizzi che abbiamo spiegato, e non esiste una vera struttura per ottenere o organizzare facilmente tutte le informazioni necessarie sia per i dimostratori che per i verificatori.}
+
+\begin{enumerate}
+    \item Il dimostratore raccoglie un elenco di tutti i suoi account, dove ogni account consiste in un indirizzo normale e vari sotto-indirizzi. Crea SubaddressProof per tutti i sotto-indirizzi. Proprio come le ReserveProof, crea anche una firma con la chiave di spesa di ogni indirizzo e sottoindirizzo, dimostrando di avere i diritti di spesa su tutti gli output posseduti da quegli indirizzi.
+    \item Il dimostratore genera, per ciascuno dei suoi indirizzi standard, InProof su tutte le transazioni (ad es. tutte le chiavi pubbliche di transazione) nella blockchain. Questo rivela all'auditor tutti gli output posseduti dagli indirizzi del dimostratore poiché possono controllare tutti gli indirizzi monouso con i segreti condivisi mittente-destinatario. Possono essere sicuri che gli output posseduti dai sotto-indirizzi sono identificabili, grazie alle SubaddressProof.\footnote{Questo passaggio può essere completato anche fornendo le chiavi private di visualizzazione, sebbene abbia ovvie implicazioni sulla privacy.}
+    \item Il dimostratore genera, per ciascuno dei suoi output posseduti, UnspentProof su tutti gli input di transazione in cui appaiono come membri di un anello. Ora l'auditor conoscerà il saldo del dimostratore, e potrà indagare ulteriormente sugli output spesi.\footnote{In alternativa, potrebbe creare ReserveProof per tutti gli output posseduti. Ancora una volta, rivelare le immagini chiave degli output non spesi ha ovvie implicazioni sulla privacy.}
+    \item \emph{Opzionale}: Il dimostratore genera, per ogni transazione in cui ha speso un output, una OutProof per rivelare all'auditor il destinatario e l'importo. Questo passaggio è possibile solo per le transazioni in cui il dimostratore ha salvato le chiavi private della transazione.
+\end{enumerate}{}
+
+È importante notare che un dimostratore non ha modo di rivelare direttamente l'origine dei fondi. La sua unica risorsa è richiedere un insieme di prove alle persone che gli inviato tali fondi.
+
+\begin{enumerate}
+    \item Per una transazione che invia fondi al dimostratore, il suo autore crea una SpendProof che dimostra di averla effettivamente inviata.
+    \item Il finanziatore del dimostratore crea anche una firma con una chiave pubblica identificativa, ad esempio la chiave di spesa del proprio indirizzo standard. Sia la SpendProof che questa firma dovrebbero firmare un messaggio contenente quella chiave pubblica identificativa, per assicurarsi che la SpendProof non sia stata rubata o che sia stata in realtà creata da qualcun altro.
+\end{enumerate}{}

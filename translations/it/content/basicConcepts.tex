@@ -1,0 +1,525 @@
+\chapter{Concetti Basilari}
+\label{chapter:basicConcepts}
+
+
+
+%----------NOTATION
+\section{Notazione}
+
+L'obiettivo principale di questo documento è di raccogliere, revisionare, correggere e omologare tutte le informazioni esistenti riguardanti i meccanismi interni della criptovaluta Monero. Allo stesso tempo, gli autori hanno voluto fornire tutti i dettagli necessari per presentare il materiale in modo costruttivo e lineare.
+Un mezzo importante per raggiungere questo scopo è stato stabilire alcune convenzioni di notazione.
+Tra queste, abbiamo usato:
+
+\begin{itemize}
+\item lettere minuscole per indicare valori semplici, interi, stringhe, rappresentazioni binarie, ecc.
+\item lettere maiuscole per indicare punti su curve e costrutti più complessi.
+\end{itemize}
+
+Per gli elementi con un significato speciale, gli autori hanno cercato di usare, il più possibile, gli stessi simboli in tutto il documento. Per esempio, un generatore di curva è sempre indicato con \(G\), il suo ordine con \(l\), e chiavi private e pubbliche sono denotate, quando possibile, rispettivamente con \(K\) e \(k\), ecc.
+\\
+
+Oltre a questo, gli autori si sono impegnati nel fornire una presentazione {\em concettuale} chiara degli algoritmi e degli schemi. Il lettore con un background in informatica potrebbe trovare che siano state un po' trascurate questioni come la rappresentazione binaria degli elementi o, in alcuni casi, come eseguire operazioni concrete. Inoltre, anche gli studenti di matematica potrebbero notare che abbiamo evitato spiegazioni di algebra astratta.
+
+Tuttavia, queste semplificazioni non sono da considerarsi un male. Un oggetto semplice come un intero o una stringa può sempre essere rappresentato come una sequenza di bit. Il cosiddetto "endianness" è raramente rilevante ed è per lo più una questione di convenzione.\footnote{Nella memoria del computer, ogni byte è memorizzato in un proprio indirizzo (un indirizzo è simile a una casella numerata in cui può essere memorizzato un byte). Una data \emph{parola} o variabile è referenziata dall’indirizzo più basso dei suoi byte. Se la variabile \(x\) ha 4 byte, memorizzati negli indirizzi 10-13, l’indirizzo 10 viene usato per trovare \(x\). Il modo in cui i byte di \(x\) sono organizzati nel suo insieme di indirizzi dipende dall’\emph{endianness}, anche se ogni singolo byte è sempre memorizzato nello stesso modo all’interno del suo indirizzo. In pratica, quale estremo di \(x\) è memorizzato nell’indirizzo di riferimento? Può essere il \emph{big end} oppure il \emph{little end}. Dato \(x = \) 0x12345678 (esadecimale, 2 cifre esadecimali occupano 1 byte, ad esempio 8 cifre binarie, dette anche bit), e un array di indirizzi \(\{10, 11, 12, 13\}\), la codifica big endian di \(x\) è \(\{12, 34, 56, 78\}\) mentre la codifica little endian è \(\{78, 56, 34, 12\}\). \cite{endianness}}
+
+I punti su curve ellittiche sono normalmente indicati come coppie \((x, y)\),  possono quindi essere rappresentati con due numeri interi. Tuttavia, nel mondo della crittografia è comune applicare tecniche di {\em compressione dei punti}, che permettono di rappresentare un punto utilizzando solo lo spazio di una coordinata. Per l'approccio concettuale adottato da questo documento, l’uso della compressione dei punti è spesso superfluo, ma nella maggior parte dei casi si assume implicitamente che venga utilizzata.\\
+
+È stato\marginnote{src/crypto/ {\tt keccak.c}} fatto un uso libero di funzioni hash crittografiche senza specificare in concreto gli algoritmi alla base. Nel caso di Monero, si tratta tipicamente di una variante di \(\mathit{Keccak}\)\footnote{\label{kekkak_note}The Keccak hashing algorithm forms the basis for the NIST standard {\em SHA-3} \cite{nist-sha3}.}, ma a meno che non venga menzionato esplicitamente, ciò non è rilevante ai fini della teoria.
+
+Una funzione hash crittografica (d’ora in poi semplicemente “funzione hash” o “hash”) prende in input un messaggio $\mathfrak{m}$ di lunghezza arbitraria e restituisce un hash $h$ (o `digest del messaggio') di lunghezza fissa, con ogni possibile output equiprobabile per un dato input. Le funzioni hash crittografiche sono difficili da invertire, possiedono una caratteristica molto interessante nota come {\em effetto valanga} che può far sì che messaggi molto simili generino hash molto diversi, ed è difficile trovare due messaggi con lo stesso digest.
+
+Le funzioni hash saranno applicate a interi, stringhe, punti su curve o combinazioni di questi oggetti. Tali applicazioni devono essere interpretate come hash delle rappresentazioni in bit, o della concatenazione di tali rappresentazioni dei vari elementi. A seconda del contesto, il risultato di un hash potrà essere numerico, una stringa di bit o persino un punto su curva. Ulteriori dettagli a riguardo saranno forniti nel momento opportuno.
+
+
+
+%----------MODULAR ARITHMETIC
+\section{Aritmetica Modulare}
+\label{sec:modular-arithmetic}
+
+La maggior parte della crittografia moderna parte dall'aritmetica modulare, che a sua volta inizia con l'operatore \emph{modulo} (indicato con \mathit{mod}). In questo documento verrà preso in considerazione soltanto il modulo positivo, che restituisce sempre un numero intero positivo.
+
+Il modulo positivo è simile al \emph{resto} dopo la divisione tra due numeri, ad esempio $c$ è il `resto' di $a/b$. Si immagini una retta numerica: per calcolare $c = a \pmod b$ ci posizioniamo al punto $a$ e camminiamo verso lo zero con passi di ampiezza $\text{step} = b$ fino a raggiungere un numero intero $\geq{0}$ e $<b$. Quel numero è $c$. Ad esempio, $4$ (modulo 3) $= 1$, $-5 \pmod 4 = 3$, e così via.
+
+Formalmente, il modulo positivo per $c = a \pmod b$ è definito come $a=bx+c$, dove $0\leq{c}<{b}$ e $x$ è un intero con segno (mentre $b$ è un intero maggiore di zero).
+
+Nota che, se $a \leq n$ allora $-a \pmod n$ è uguale a $n - a$.
+
+
+\subsection{Somma e Moltiplicazione Modulari}
+\label{subsec:modular-addition-multiplication}
+
+In informatica è importante evitare l'uso di grandi numeri quando si compiono operazioni di aritmetica modulare. Ad esempio, se abbiamo $29+87 \pmod{99}$ e non abbiamo la possibilità di utilizzare tre o più cifre (come $116 = 29+87$), allora non è possibile calcolare $116 \pmod{99} = 17$ direttamente.
+
+Per calcolare $c = a+b \pmod n$, dove $a$ e $b$ sono minori del modulo $n$, basta tener conto del seguente:
+\begin{itemize}
+	\item Calcola $x = n-a$. Se $x > b$ allora $c = a+b$, altrimenti $c = b - x$.
+\end{itemize}
+
+Nell'aritmetica modulare l'operazione di moltiplicazione ($a*b \pmod n = c$) può essere eseguita attraverso l'algoritmo \emph{double-and-add}. Introduciamolo attraverso un esempio: si supponga di voler calcolare $7*8 \pmod 9 = 2$. Che equivale a  
+\[7*8 = 8+8+8+8+8+8+8 \pmod 9\]
+
+Raggruppando in gruppi di due, otteniamo: 
+\[(8+8) + (8+8) + (8+8) + 8\]
+
+E ancora, per gruppi di due:
+\[[(8+8) + (8+8)] + (8+8) + 8\]
+
+Il numero totale di operazioni di somma $+$ si riduce da 6 a 4 perché è necessario calcolare $(8+8)$ solo una volta.\footnote{L'effetto di double-and-add diventa più evidente con grandi numeri. Ad esempio, con $2^{15} * 2^{30}$ somme dirette richiederebbe circa $2^{15}$ $+$ operazioni, mentre double-and-add solo 15!}\\
+
+L'implementazione dell'algoritmo double-and-add comporta la conversione del primo numero (il `moltiplicando' $a$) in binario (nel nostro esempio, 7 $\rightarrow$ [0111]). In seguito la rappresentazione binaria prodotta sarà utilizzata come un array di bit su cui si baseranno le operazioni previste dell'algoritmo. 
+
+Supponiamo di avere un array $A = [0111]$ di indice $i$ che può assumere valori 3,2,1,0.\footnote{Conosciuta anche come numerazione `LSB 0', dato che il bit meno significativo ha indice 0. Al fine di facilitare l'approccio, la numerazione `LSB 0' sarà utilizzata nel resto del capitolo, traslaciando eventuale convenzioni più accurate.} A[0] = 1 è il primo elemento di A ed è anche il bit meno significativo. Dichiariamo una variabile risultato con valore iniziale $r = 0$, ed una variabile somma $s = 8$ (in generale $s = b$). Seguiamo il seguente algoritmo:
+\begin{enumerate}
+	\item Per ogni: $i = (0,...,A_{size} - 1)$
+	\begin{enumerate}
+		\item Se A[i] == 1, allora $r = r + s \pmod n$.
+		\item Calcola $s = s + s \pmod n$.
+	\end{enumerate}
+	\item Usa l'ultimo risultato $r$: $c = r$.
+\end{enumerate}
+
+Nell'esempio di prima $7*8 \pmod 9$, l'esecuzione di questo algoritmo apparirà come segue:
+\begin{enumerate}
+	\item $i = 0$
+	\begin{enumerate}
+		\item A[0] = 1, dunque $r = 0 + 8 \pmod 9$ = 8
+		\item $s = 8 + 8 \pmod 9$ = 7
+	\end{enumerate}
+	\item $i = 1$
+	\begin{enumerate}
+		\item A[1] = 1, dunque $r = 8 + 7 \pmod 9$ = 6
+		\item $s = 7 + 7 \pmod 9$ = 5
+	\end{enumerate}
+	\item $i = 2$
+	\begin{enumerate}
+		\item A[2] = 1, dunque $r = 6 + 5 \pmod 9$ = 2
+		\item $s = 5 + 5 \pmod 9$ = 1
+	\end{enumerate}
+	\item $i = 3$
+	\begin{enumerate}
+		\item A[3] = 0, dunque $r$ rimane uguale
+		\item $s = 1 + 1 \pmod 9$ = 2
+	\end{enumerate}
+	\item $r = 2$ è il risultato
+\end{enumerate}
+
+
+\subsection{Potenza Modulo}
+
+Definita l'operazione di elevamento alla potenza $8^7 \pmod 9 = 8*8*8*8*8*8*8 \pmod 9$. Come \emph{double-and-add}, esiste anche l'algoritmo \emph{square-and-multiply}. In generale $a^e \pmod{n}$ l'algoritmo è implementato come segue:
+\begin{enumerate}
+	\item Definita $e_{scalar} \rightarrow e_{binary}$; $A = [e_{binary}]$; $r = 1$; $m = a$
+	\item Per ogni: $i = (0,...,A_{size} - 1)$
+	\begin{enumerate}
+		\item Se A[i] == 1, allora $r = r * m \pmod n$.
+		\item Calcola $m = m * m \pmod n$.
+	\end{enumerate}
+	\item Usa l'ultimo $r$ come risultato.
+\end{enumerate}
+
+
+\subsection{Inverso Moltiplicativo Modulo}
+
+A volte abbiamo bisogno di \(1/a \pmod n\), o detto diversamente \(a^{-1} \pmod n\). L'inverso di qualcosa moltiplicato per se stesso è per definizione uno (identità). Immagina \(0.25 = 1/4\), e quindi \(0.25 \times 4 = 1\).\\
+
+Nell'aritmetica modulare, per \(c = a^{-1} \pmod{n}\), vale \(a c \equiv 1 \pmod{n}\) con \(0 \leq c < n\) e con \(a\) e \(n\) \emph{coprimi}.\footnote{Nell'equazione \(a \equiv b \pmod{n}\), \(a\) è {\em congruente} a \(b \pmod{n}\), il che significa semplicemente che \(a \pmod{n} = b \pmod{n}\).} Due numeri \emph{coprimi} non condividono alcun divisore tranne 1 (la frazione \(a/n\) non può essere ridotta/semplificata).
+
+Possiamo usare il metodo `square-and-multiply' per calcolare l'inverso moltiplicativo modulo quando \(n\) è un numero primo, grazie al {\em piccolo teorema di Fermat}:\footnote{\label{inverse_rule_note}L'inverso moltiplicativo modulo soddisfa la seguente regola:\\
+{\em Se \(a c \equiv b \pmod{n}\) con \(a\) e \(n\) coprimi, la soluzione a questa congruenza lineare è data da \(c = a^{-1} b \pmod{n}\).}\cite{wiki-modular-arithmetic}\\
+Ciò significa che possiamo fare \(c = a^{-1} b \pmod n \rightarrow c a \equiv b \pmod n \rightarrow a \equiv c^{-1} b \pmod n\).}\vspace{.175cm}
+\begin{align*} 
+    a^{n-1} &\equiv 1 \pmod{n} \\
+    a \cdot a^{n-2} &\equiv 1 \pmod{n} \\
+    c \equiv a^{n-2} &\equiv a^{-1} \pmod{n}
+\end{align*}
+
+In generale (e più rapidamente), il cosiddetto `algoritmo esteso di Euclide' \cite{extended-euclidean} può trovare anche gli inversi modulari.
+
+
+\subsection{Equazioni Modulari}
+\label{subsec:modular-equations}
+
+Supponiamo di avere un'equazione \(c = 3 \times 4 \times 5 \pmod 9\). Calcolarla è semplice. Dato un operatore \(\circ\) (per esempio, \(\circ = *\)) tra due espressioni \(A\) e \(B\):\vspace{.175cm}
+\[(A \circ B)\pmod{n} = {[A\pmod {n}] \circ [B\pmod{n}]}\pmod{n}\]
+
+Nel nostro esempio poniamo \(A = 3 \times 4\), \(B = 5\) e \(n = 9\):\vspace{.175cm}
+\begin{align*}
+(3 \times 4 \times 5) \pmod{9} &= {[3 \times 4 \pmod{9}] \times [5 \pmod{9}]} \pmod{9} \\
+                               &= [3] \times [5] \pmod{9} \\
+                               c &= 6
+\end{align*}
+
+Ora abbiamo un modo per fare la sottrazione in modulo.\vspace{.175cm}
+\begin{align*}
+A - B \pmod n &\rightarrow A + (-B) \pmod n \\
+			  &\rightarrow {[A \pmod{n}] + [-B \pmod{n}]} \pmod{n}
+\end{align*}\\
+
+Lo stesso principio si applica a qualcosa come \(x = (a - b \times c \times d)^{-1} (e \times f + g^{h}) \pmod n\).\footnote{Il calcolo del modulo di numeri grandi può sfruttare le equazioni modulari. Per esempio, \(254 \pmod{13} \equiv 2 \times 10 \times 10 + 5 \times 10 + 4 \equiv (((2) \times 10 + 5) \times 10 + 4) \pmod{13}\). Un algoritmo per calcolare \(a \pmod n\) quando \(a > n\) è:
+\begin{enumerate}
+    \item Definire \(A \rightarrow [a_{decimal}]\); \(r = 0\)
+    \item Per \(i = A_{size} - 1, ..., 0\)
+    \begin{enumerate}
+        \item \(r = (r \times 10 + A[i]) \pmod n\)
+    \end{enumerate}
+    \item Usare il valore finale di \(r\) come risultato.
+\end{enumerate}}
+
+
+
+%----------ELLIPTIC CURVE CRYPTOGRAPHY
+\section{Crittografia a Curva Ellittica}
+\label{EllipticCurveCryptography}
+
+
+\subsection{Le Curve Ellittiche}
+\label{elliptic_curves_section}
+
+Un\marginnote{{\tt fe}: elemento del campo} campo primo \(\mathbb{F}_q\), dove \(q\) è un numero primo maggiore di 3, è un insieme formato dagli elementi \(\{0, 1, 2, ..., q-1\}\). Somma e moltiplicazione \((+,  \cdot)\) e cambio di segno $(-)$ sono calcolati\( \pmod q\).
+
+``Calcolato\( \pmod q\)" significa che\( \pmod q\) è eseguito in qualche istanza di un'operazione aritmetica tra due elementi del campo (o cambio di segno di un singolo elemento del campo). Ad esempio, dato un campo primo \(\mathbb{F}_p\) con $p = 29$, $17+20=8$ perché $37 \pmod{29} = 8$. Anche $-13 = -13 \pmod{29} = 16$.\\
+
+Tipicamente, data una coppia $(a,b)$ è possibile definire una curva ellittica come l'insieme dei punti \((x, y)\) che soddisfano l'equazione di {\em Weierstraß} \cite{Hankerson:2003:GEC:940321}:\footnote{\label{notation1}Nota: La dicitura $a \in \mathbb{F}$ indica che $a$ è un qualche elemento del campo $\mathbb{F}$.}\vspace{.175cm}
+\[y^2 = x^3 + a x + b \quad \textrm{dove} \quad a, b, x, y \in \mathbb{F}_q\]
+
+La criptovaluta Monero utilizza una particolare curva che appartiene alla categoria di curve ellittiche {\em Twisted Edwards} \cite{Bernstein2008}, le quali sono comunemente espresse nella forma (data una coppia $(a,d)$):\vspace{.175cm}
+\[a x^2 + y^2 = 1 + d x^2 y^2 \quad \textrm{dove} \quad a, d, x, y \in \mathbb{F}_q \]
+
+
+Il vantaggio che offre la seconda rispetto alla prima forma di Weierstraß è quello di ridurre le operazioni di aritmetica modulare necessarie alle primitive crittografiche, consentendo di costruire algoritmi crittografici più veloci (vedi Bernstein {\em et al.} in \cite{Bernstein2007} per dettagli).\\
+
+Siano \(P_1 = (x_1, y_1)\) e \(P_2 = (x_2, y_2)\) due punti appartenti ad una curva ellittica Twisted Edwards (d'ora in poi EC per semplicità). Definiamo la somma tra i punti $P_1 + P_2 = (x_1, y_1) + (x_2, y_2)$ come punto $P_3 = (x_3, y_3)$ dove\footnote{Tipicamente i punti di una curva ellittica sono convertiti in coordinate proiettive\marginnote{src/crypto/ crypto\_ops\_ builder/ ref10Comm- entedComb- ined/\\ ge.h} prima di operazioni come somma tra punti, in modo tale da evitare di eseguire inversioni di campo migliorando così l'efficienza. \cite{ecc-projective}}\vspace{.175cm}
+\begin{align*}
+x_3 & =  \frac{x_1 y_2 + y_1 x_ 2}{1 + d x_1 x_2 y_1 y_2}  \pmod{q} \\
+y_3 & =  \frac{y_1 y_2 - a x_1 x_2}{1 - d x_1 x_2 y_1 y_2} \pmod{q} 
+\end{align*}
+
+Queste formule per l’addizione valgono anche per il raddoppio di un punto; cioè, quando \(P_1 = P_2\). Per sottrarre un punto, si invertono le sue coordinate rispetto all’asse y, \((x,y) \rightarrow (-x,y)\) \cite{Bernstein2008}, e si usa l’addizione di punti. Ricordiamo che gli elementi `negativi’ \(-x\) di \(\mathbb{F}_q\) sono in realtà \(-x \pmod{q}\).
+\\
+
+Ogni volta che si sommano due punti di una curva, il risultato \(P_3\) è anch'esso un punto appartenente alla curva ellittica, ovvero tutti \(x_3,y_3 \in \mathbb{F}_q\) soddisfano l’equazione della EC.
+
+Ogni punto \(P\) appartenente ad una curva ellittica può generare un sottogruppo di ordine (dimensione) \(u\) composto da alcuni altri punti della curva multipli del punto \(P\). Ad esempio, il sottogruppo di un punto \(P\) può avere ordine 5 e contenere i punti \((0, P, 2P, 3P, 4P)\), ciascuno appartenente alla curva. Al punto \(5P\) compare il cosiddetto {\em punto di divergenza}, che è come la posizione `zero’ su una curva ellittica, e ha coordinate \((0,1)\).\footnote{Si scopre che le curve ellittiche hanno una struttura di {\em gruppo abeliano} rispetto all’operazione di addizione descritta, dato che il punto di divergenza corrisponde all’elemento identità. Una definizione concisa di questo concetto si trova su \url{https://brilliant.org/wiki/abelian-group/}.}
+
+Per convenzione, \(5P + P = P\). Questo significa che il sottogruppo è {\em ciclico}.\footnote{\label{cyclical_note}Sottogruppo ciclico significa che, per il sottogruppo di \(P\) con ordine \(u\), e per ogni intero \(n\), vale \(n P = [n \pmod{u}] P\). Possiamo immaginarci su un punto su una sfera a una certa distanza da una posizione `zero’, e ogni passo sposta di quella distanza. Dopo un certo numero di passi torneremo al punto di partenza, anche se può servire più di una rivoluzione per arrivarci esattamente. Il numero di passi per tornare esattamente al punto iniziale è l’`ordine’ del gruppo di passi, e tutte le nostre posizioni sono punti unici di quel gruppo. Si consiglia di applicare questo concetto anche ad altre idee discusse qui.} Tutti i punti \(P\) nella curva generano un sottogruppo ciclico. Se \(P\) genera un sottogruppo di ordine primo, allora tutti i punti inclusi (eccetto il punto di divergenza) generano lo stesso sottogruppo. Nel nostro esempio, consideriamo i multipli del punto \(2P\):\vspace{.175cm}
+\[2P, 4P, 6P, 8P, 10P \rightarrow 2P, 4P, 1P, 3P, 0\]
+
+Un altro esempio: un sottogruppo di ordine 6 \((0, P, 2P, 3P, 4P, 5P)\). Multipli del punto \(2P\):\vspace{.175cm}
+\[2P, 4P, 6P, 8P, 10P, 12P \rightarrow 2P, 4P, 0, 2P, 4P, 0\]
+Qui \(2P\) ha ordine 3. Poiché 6 non è primo, non tutti i punti del sottogruppo ricreano il sottogruppo originale.
+
+Ogni curva ellittica ha un ordine \(N\) pari al numero totale di punti sulla curva (incluso il punto di divergenza), e gli ordini di tutti i sottogruppi generati dai punti sono divisori di \(N\) (secondo il {\em teorema di Lagrange}). Possiamo immaginare l’insieme di tutti i punti della curva \(\{0,P_1,...,P_{N-1}\}\). Se \(N\) non è primo, alcuni punti formeranno sottogruppi con ordini pari ai divisori di \(N\).
+
+Per trovare l’ordine \(u\) del sottogruppo generato da un punto \(P\):
+\begin{enumerate}
+    \item Trova \(N\) (ad esempio usando il {\em algoritmo di Schoof}).
+    \item Trova tutti i divisori di \(N\).
+    \item Per ogni divisore \(n\) di \(N\), calcola \(n P\).
+    \item Il più piccolo \(n\) tale che \(n P = 0\) è l’ordine \(u\) del sottogruppo.
+\end{enumerate}
+
+Le curve ellittiche\marginnote{{\tt ge}: elemento del gruppo} scelte per la crittografia tipicamente hanno \(N = h l\), dove \(l\) è un numero primo sufficientemente grande (ad esempio 160 bit) e \(h\) è il cosiddetto {\em cofattore}, che può essere piccolo come 1 o 2.\footnote{Curve con piccoli cofattori permettono un’addizione di punti più veloce, ecc. \cite{Bernstein2008}.} Di norma, un punto nel sottogruppo di dimensione \(l\) è scelto come generatore \(G\). Per ogni altro punto \(P\) in quel sottogruppo esiste un intero \(0 < n \leq l\) tale che \(P = n G\).
+
+Approfondiamo. Supponiamo che esista un punto \(P'\) con ordine \(N\), dove \(N = h l\). Ogni altro punto \(P_i\) può essere trovato come \(P_i = n_i P'\) per qualche intero \(n_i\). Se \(P_1 = n_1 P'\) ha ordine \(l\), ogni \(P_2 = n_2 P'\) con ordine \(l\) deve essere nello stesso sottogruppo di \(P_1\), poiché \(l P_1 = 0 = l P_2\), e se \(l(n_1 P') \equiv l(n_2 P') \equiv N P' = 0\), allora \(n_1\) e \(n_2\) devono essere multipli di \(h\). Dato che \(N = h l\), ci sono solo \(l\) multipli di \(h\), implicando che è possibile un solo sottogruppo di dimensione \(l\).
+
+In parole semplici, il sottogruppo formato dai multipli di \((h P')\) contiene sempre \(P_1\) e \(P_2\). Inoltre, \(h(n' P') = 0\) quando \(n'\) è multiplo di \(l\), e ci sono solo \(h\) variazioni di \(n' \pmod{N}\) (incluso il punto di divergenza per \(n' = h l\)) perché quando \(n' = h l\) si ritorna a 0: \(h l P' = 0\). Quindi, ci sono solo \(h\) punti \(P\) nella curva tale che \(h P = 0\).
+
+Un ragionamento simile vale per qualunque sottogruppo di ordine \(u\). Qualsiasi coppia di punti \(P_1\) e \(P_2\) di ordine \(u\) appartiene allo stesso sottogruppo, formato dai multipli di \((N/u) P'\).
+\\ \newline
+Con questa nuova comprensione è chiaro che possiamo usare il seguente algoritmo per trovare punti (diversi dal punto di divergenza) nel sottogruppo di ordine \(l\):
+\begin{enumerate}
+    \item Trova \(N\) della curva ellittica EC, scegli l’ordine \(l\) del sottogruppo, calcola \(h = N / l\).
+    \item Scegli un punto casuale \(P'\) in EC.
+    \item Calcola \(P = h P'\).
+    \item Se \(P = 0\) torna al passo 2, altrimenti \(P\) è nel sottogruppo di ordine \(l\).
+\end{enumerate}
+
+Calcolare\marginnote{{\tt sc}: scalare} il prodotto scalare tra un intero \(n\) e un punto \(P\), \(nP\), non è difficile, mentre trovare \(n\) tale che \(P_1 = n P_2\) è considerato computazionalmente difficile. Per analogia con l’aritmetica modulare, questo problema è chiamato {\em problema del logaritmo discreto} (DLP). La moltiplicazione scalare può essere vista come una {\em funzione a senso unico}, che apre la strada all’uso delle curve ellittiche in crittografia.\footnote{Non esistono equazioni o algoritmi noti che risolvano efficientemente (con la tecnologia disponibile) per \(n\) in \(P_1 = n P_2\), il che significa che potrebbero servire moltissimi anni per risolvere un singolo prodotto scalare.}
+
+Il prodotto scalare \(nP\) equivale a \((((P+P)+(P+P)) \ldots )\). Anche se non sempre è il metodo più efficiente, possiamo usare la tecnica del double-and-add come nella Sezione \ref{subsec:modular-addition-multiplication}. Per ottenere la somma \(R = n P\), si ricorda la definizione dell’operazione di somma \(+\) tra punti discussa nella Sezione \ref{elliptic_curves_section}.
+
+\begin{enumerate}
+	\item Data una funzione \(n_{scalar} \rightarrow n_{binary}\); \(A = [n_{binary}]\); \(R = 0\), il punto di divergenza; \(S = P\)
+	\item Per ogni \(i = (0, \ldots, A_{size} - 1)\)
+	\begin{enumerate}
+		\item Se A[i] == 1, calcolare R += S.
+		\item Calcolare S += S.
+	\end{enumerate}
+	\item Usare l'ultimo R come risultato.
+\end{enumerate}
+
+Si noti che gli scalari delle curve ellittiche per i punti nel sottogruppo di ordine \(l\) (che useremo da ora in avanti) appartengono al campo finito \(\mathbb{F}_l\). Questo significa che l’aritmetica tra scalari è modulo \(l\).
+
+
+\subsection{Crittografia a Chiave Pubblica con Curve Ellittiche}
+\label{ec:keys}
+Gli algoritmi di crittografia a chiave pubblica possono essere concepiti in modo analogo all'aritmetica modulare.
+
+Sia \(k\) un numero casuale tale che \(0 < k < l\), esso corrisponde alla {\em chiave privata (private key)}.\footnote{La chiave privata viene chiamata anche {\em chiave segreta (secret key)}. Ciò ci consente di abbreviare: pk = public key, sk = secret key.} È possibile calcolare la {\em chiave pubblica (public key)} \(K\) (un punto sulla EC) tramite il prodotto scalare \(k G = K\). 
+
+Per via del {\em problema del logaritmo discreto (discrete logarithm problem)} (DLP) risulta difficile dedurre \(k\) da \(K\) soltanto. Ciò consente di utilizzare \((k, K)\) negli algoritmi crittografici a chiave pubblica standard.
+
+
+\subsection{Scambio Chiavi Diffie-Hellman con Curve Ellittiche}
+\label{DH_exchange_section}
+
+Uno scambio {\em Diffie-Hellman} \cite{Diffie-Hellman} basilare di un segreto condiviso tra {\em Alice} e {\em Bob} può avvenire nella seguente modalità:
+
+\begin{enumerate}
+	\item Alice e Bob generano le loro chiavi private e pubbliche \((k_A, K_A) \textrm{ e } (k_B, K_B)\). Entrambi pubblicano o scambiano le loro chiavi pubbliche, senza rivelare quelle private.
+
+	\item Il segreto condiviso si definisce come \[S = k_A K_B = k_A k_B G = k_B k_A G = k_B K_A\]
+
+	Alice può calcolare privatamente \(S = k_A K_B\), e Bob \(S = k_B K_A\), in modo tale da permettere di utilizzare questo valore come segreto condiviso.
+
+	Ad esempio, se Alice ha un messaggio $m$ da inviare a Bob, può calcolare l'hash del segreto condiviso \(h = \mathcal{H}(S)\), calcolare $x = m + h$, ed inviare $x$ a Bob. Bob calcolerà in seguito $h' = \mathcal{H}(S)$, e $m = x - h'$, ottenendo così $m$.
+\end{enumerate}   
+
+Un osservatore esterno non sarà in grado di calcolare facilmente il segreto condiviso a causa del `Problema di Diffie-Hellman' (DHP), il quale afferma che trovare $S$ da $K_A$ e $K_B$ è veramente difficile. Inoltre, il DLP rende impossibile trovare $k_A$ o $k_B$.\footnote{Si ritiene che il DHP abbia almeno una difficoltà simile al DLP, sebbene non sia stato dimostrato. \cite{diffie-hellman-problem}}
+
+
+\subsection{Firme di Schnorr e la Trasformazione di Fiat-Shamir}
+\label{sec:schnorr-fiat-shamir}
+
+Nel 1989 Claus-Peter Schnorr pubblica un protocollo di autenticazione interattivo \cite{schnorr-signatures}, generalizzato da Maurer nel 2009 \cite{simple-zk-proof-maurer}, che permette a chiunque di dimostrare la conoscenza di una chiave privata $k$ corrispondente ad una certa chiave pubblica $K$ senza rivelare nessuna informazione su di essa \cite{Signatures2015BorromeanRS}. A grandi linee, funziona come segue:
+
+\begin{enumerate}
+	\item Il dimostratore genera un numero intero casuale \(\alpha \in_R \mathbb{Z}_l\),\footnote{\label{notation3_note}Notazione: La $R$ in \(\alpha \in_R \mathbb{Z}_l\) significa che $\alpha$ è estratto casualmente da \(\{1,2,3,...,l-1\}\).\marginnote{src/crypto/ crypto.cpp {\tt random32\_ unbiased()}} In altre parole, $\mathbb{Z}_l$ sono tutti interi$\pmod l$. Escludiamo `$l$' in quanto il punto-ad-infinito non è utile in questo contesto.} calcola $\alpha G$, ed invia $\alpha G$ al verificatore.
+	\item Il verificatore genera una {\em sfida} casuale $c \in_R \mathbb{Z}_l$ ed invia $c$ al dimostratore.
+	\item Il dimostratore calcola la {\em risposta} $r = \alpha + c*k$ ed invia $r$ al verificatore.
+	\item Il verificatore calcola $R = r G$ e $R' = \alpha G + c*K$, e verifica che $R \stackrel{?}{=} R'$.
+\end{enumerate}
+
+Il verificatore può calcolare $R' = \alpha G + c*K$ prima del dimostratore, in modo tale che inviare $c$ in grosso modo corrisponda a chiedere ``sfida: qual è il logaritmo discreto di $R'$?." Una sfida a cui il dimostratore può fornire una risposta giusta con una probabilità trascurabile, se non è a conoscenza della chiave $k$.
+
+Se $\alpha$ è stato scelto in maniera casuale dal dimostratore allora $r$ è distribuita in maniera casuale \cite{SCOZZAFAVA1993313} e $k$ è sicura a livello di teoria dell'informazione all'interno di $r$ (anche se può essere trovata risolvendo DLP per $K$ o $\alpha G$).\footnote{\label{information_theoretic_note}Un sistema crittografico con sicurezza a livello di teoria dell'informazione è ingestibile anche da un attaccante dotato di potenza di calcolo virtualmente infinita, e ciò è dovuto dal semplice fatto che l'attaccante non dispone di sufficienti informazioni.} Tuttavia, se il dimostratore riutilizza $\alpha$ per dimostrare la conoscenza di $k$, chiunque sia a conoscenza di entrambe le sfide in $r = \alpha + c*k$ e $r' = \alpha + c'*k$ può calcolare $k$ (due equazioni, due incognite).\footnote{Supponiamo che il dimostratore sia un computer, e immaginiamo che qualcuno cloni/copi il computer dopo che ha generato $\alpha$, then presenting each copy with a different challenge.}\vspace{.175cm}%In security proofs, phrases like `forking lemma' and `rewind on success' are analagous to this cloning attack. See for example \cite{Liu2004}.
+\[k = \frac{r-r'}{c-c'}\]
+
+Se il dimostratore è a conoscenza di $c$ sin dall'inizio (ad esempio, gli è stato fornito segretamente dal verificatore), può generare una risposta casuale $r$ e calcolare $\alpha G = r G - c K$. In seguito all'invio di $r$ al verificatore, viene `dimostrata' la conoscenza di $k$ senza esserne effettivamente a conoscenza. Un osservatore della trascrizione degli scambi tra il proponente e il verificatore non ne ricaverebbe alcuna informazione aggiuntiva. Lo schema non è {\em pubblicamente verificabile}. \cite{Signatures2015BorromeanRS}\\
+
+Nel suo ruolo di sfidante, il verificatore sputa fuori un numero casuale dopo aver ricevuto $\alpha G$, rendendolo equivalente a una {\em funzione casuale}. Le funzioni casuali, come le funzioni hash, sono note come oracoli casuali perché calcolarne una equivale a richiedere un numero casuale a qualcuno \cite{Signatures2015BorromeanRS}.\footnote{Più in generale, ``nella crittografia... un oracolo è qualsiasi sistema in grado di fornire informazioni aggiuntive su un sistema, altrimenti non disponibili." \cite{cryptographic-oracle}}\\
+
+L’uso di una funzione hash, al posto del verificatore, per generare le sfide è noto come {\em trasformazione di Fiat-Shamir} \cite{fiat-shamir-transform}, perché rende una prova interattiva non interattiva e pubblicamente verificabile \cite{Signatures2015BorromeanRS}.\footnote{L’output di una funzione hash crittografica $\mathcal{H}$ è distribuito uniformemente sull’insieme dei possibili risultati. In altre parole, per un certo input $A$, $\mathcal{H}(A) \in^D_R \mathbb{S}_H$, dove $\mathbb{S}_H$ è l’insieme dei possibili output della funzione $\mathcal{H}$. Usiamo $\in^D_R$ per indicare che la funzione è deterministica ma con comportamento casuale: $\mathcal{H}(A)$ produce sempre lo stesso risultato, ma il suo output è equivalente a un numero casuale.}
+\footnote{Si noti che le prove (e firme) non interattive in stile Schnorr richiedono l’uso di un generatore $G$ fisso, oppure l’inclusione del generatore nell’hash della sfida. Includerlo in questo modo è noto come \textit{key prefixing}, di cui parleremo più avanti (Sezioni \ref{blsag_note} e \ref{sec:robust-key-aggregation}).}
+
+\subsubsection*{Prove Non interattive}
+
+\begin{enumerate}
+	\item Generare un numero casuale $\alpha \in_R \mathbb{Z}_l$, e calcola $\alpha G$.
+	\item Calcolare la sfida usando una funzione hash crittografica sicura, \(c = \mathcal{H}([\alpha G])\).
+	\item Definire il risultato $r = \alpha + c*k$.
+	\item Pubblicare la coppia di prove $(\alpha G, r)$.
+\end{enumerate}
+
+\subsubsection*{Verifica}
+
+\begin{enumerate}
+	\item Calcolare la sfida: \(c' = \mathcal{H}([\alpha G])\).
+	\item Calcolare $R = r G$ e $R' = \alpha G + c'*K$.
+	\item Se $R = R'$ allora il dimostratore conosce $k$ con altissima probabilità.
+\end{enumerate}
+
+\subsubsection*{Come Funziona}
+
+\begin{align*}
+r G &= (\alpha + c*k) G \\
+	&= (\alpha G) + (c*k G) \\
+	&= \alpha G + c*K \\
+  R &= R'
+\end{align*}
+
+Una parte importante di qualsiasi schema di prova o firma sono le risorse necessarie per la loro verifica. Questo include lo spazio necessario per memorizzare le prove e il tempo richiesto per la verifica. In questo schema memorizziamo un punto su curva ellittica (EC point) e un intero, ed è necessario conoscere la chiave pubblica — ovvero un altro punto sulla curva ellittica. Poiché le funzioni hash sono relativamente veloci da calcolare, è importante tenere presente che il tempo di verifica dipende principalmente dalle operazioni effettuate su curve ellittiche\marginnote{src/ringct/ rctOps.cpp}.
+
+
+\subsection{Firma dei Messaggi}
+\label{sec:signing-messages}
+
+Tipicamente, una firma crittografica viene eseguita sull'hash crittografico di un messaggio, piuttosto che sul messaggio stesso, per facilitare la firma di messaggi di dimensioni variabili. Tuttavia, in questo documento useremo il termine `messaggio' in senso lato, e il suo simbolo $\mathfrak{m}$, per riferirci sia al messaggio in senso proprio sia al suo valore di hash, salvo diversa specifica.
+
+La firma dei messaggi è una componente fondamentale della sicurezza su Internet, che consente al destinatario di un messaggio di avere la certezza che il contenuto sia quello inviato dal firmatario. Uno schema di firma molto comune è chiamato ECDSA. Vedi \cite{ecdsa}, ANSI X9.62 e \cite{Hankerson:2003:GEC:940321}.
+
+Lo schema di firma che presentiamo qui è una formulazione alternativa della prova di Schnorr trasformata vista in precedenza. Pensare alle firme in questo modo prepara il lettore alle firme ad anello trattate nel prossimo capitolo.
+
+\subsubsection*{Firma}
+
+Si supponga che Alice possieda la coppia di chiavi private e pubbliche \((k_A, K_A)\). Per firmare in modo univoco un messaggio arbitrario $\mathfrak{m}$, può eseguire i seguenti passaggi:
+
+\begin{enumerate}
+	\item Generare un numero casuale $\alpha \in_R \mathbb{Z}_l$ e calcolare $\alpha G$.
+	\item Calcolare la sfida usando una funzione hash crittograficamente sicura: \(c = \mathcal{H}(\mathfrak{m},[\alpha G])\).
+	\item Definire la risposta $r$ in modo tale che $\alpha = r + c*k_A$, ovvero $r = \alpha - c*k_A$.
+	\item Pubblicare la firma $(c, r)$.
+\end{enumerate}
+
+\subsubsection*{Verifica}
+
+Qualsiasi terza parte che conosca i parametri di dominio della curva ellittica (che specificano quale curva è stata utilizzata), la firma $(c, r)$ e il metodo di firma, $\mathfrak{m}$ e la funzione hash, nonché la chiave pubblica $K_A$, può verificare la firma nel seguente modo:
+
+\begin{enumerate}
+	\item Calcolare la sfida: \(c' = \mathcal{H}(\mathfrak{m},[r G + c*K_A])\).
+	\item Se $c = c'$, allora la firma è valida.
+\end{enumerate}
+
+In questo schema di firma sono memorizzati due scalari ed è richiesta una chiave pubblica su curva ellittica.
+
+\subsubsection*{Perché Funziona}
+
+Questo deriva dal fatto che
+\begin{align*}
+  	 r G &= (\alpha - c*k_A) G \\
+  	  	 &= \alpha G - c*K_A \\
+\alpha G &= r G + c*K_A \\
+\mathcal{H}_n(\mathfrak{m},[\alpha G]) &= \mathcal{H}_n(\mathfrak{m},[r G + c*K_A]) \\
+       c &= c'
+\end{align*}
+
+Pertanto, la persona in possesso di $k_A$ (Alice) ha generato $(c, r)$ per $\mathfrak{m}$: dunque ha firmato il messaggio. La probabilità che qualcun altro, un falsificatore privo di $k_A$, possa aver prodotto $(c, r)$ è trascurabile, quindi il verificatore può essere ragionevolmente certo che il messaggio non sia stato manomesso.
+
+
+
+%----------CURVE ED25519
+\section{Curva Ed25519}
+\label{Ed25519_section}
+
+Monero utilizza per le operazioni crittografiche una particolare curva ellittica, chiamata Twisted Edwards, {\em Ed25519}, che è {\em birazionalmente equivalente}\footnote{\label{birational_note}Senza entrare nei dettagli, l'equivalenza birazionale può essere intesa come un isomorfismo esprimibile tramite termini razionali.} 
+alla curva di Montgomery {\em Curve25519}.
+
+Sia la curva 25519 che Ed25519 sono state sviluppate e pubblicate da Bernstein {\em et al.} \cite{Bernstein2008, Bernstein2012, Bernstein2007}.\footnote{Il Dr. Bernstein ha anche sviluppato uno schema di cifratura noto come ChaCha \cite{Bernstein_chacha,chacha-irtf}, che l’implementazione principale di Monero utilizza per cifrare\marginnote{src/wallet/ ringdb.cpp} alcune informazioni sensibili relative ai portafogli degli utenti.}
+
+La\marginnote{src/crypto/ crypto\_ops\_ builder/ ref10Comm- entedComb- ined/\\ ge.h} curva è definita sul campo primo \(\mathbb{F}_{2^{255} - 19}\) (cioè $q = 2^{255}-19$) mediante la seguente equazione:\vspace{.175cm}
+\[-x^2 + y^2 = 1 - \frac{121665}{121666} x^2 y^2\]
+
+Questa curva affronta molte delle problematiche sollevate dalla comunità crittografica.\footnote{Anche se una curva non presenta apparenti problemi di sicurezza crittografica, è possibile che la persona o organizzazione che l’ha creata conosca una debolezza nascosta che si manifesta solo in curve molto rare. Tale persona potrebbe generare casualmente molte curve fino a trovarne una con una vulnerabilità segreta, dunque non nota. Fornire spiegazioni ragionevoli e dettagliati per i parametri della curva rende molto più difficile introdurre debolezze occulte. La curva Ed25519 è nota come per essere `completamente rigida', ovvero il suo processo di generazione è stato completamente documentato. \cite{elliptic-curve-rigidity}} È risaputo che gli algoritmi standardizzati dal NIST\footnote{\label{NIST_note}National Institute of Standards and Technology, \url{https://www.nist.gov/}} 
+presentano delle criticità. Ad esempio, è emerso recentemente che l’algoritmo di generazione di numeri casuali PNRG (la versione basata su curve ellittiche) presenta delle falle e potrebbe contenere una backdoor \cite{hales2014nsa}. In un contesto più ampio, le autorità di standardizzazione come il NIST portano a una monocultura crittografica, introducendo un punto di centralizzazione. Un esempio lampante si è avuto quando la NSA ha sfruttato la sua influenza sul NIST per indebolire uno standard crittografico internazionale \cite{NSA-NIST}.
+
+La curva Ed25519 non è soggetta a brevetti (vedi \cite{ECC-patents} per una discussione sull’argomento), e il team che l’ha sviluppata ha
+progettato\marginnote{src/crypto/ crypto\_ops\_ builder/} e adattato gli algoritmi crittografici di base con attenzione all’efficienza \cite{Bernstein2007}.
+
+Le curve Twisted Edwards hanno un ordine esprimibile come \(N=2^c l\), dove \(l\) è un numero primo e \(c\) un intero positivo. Nel caso della curva Ed25519, il suo ordine è un numero di 76 cifre ($l$ è lungo 253 bit):\footnote{Ciò significa che le chiavi private EC in Ed25519 sono lunghe 253 bit.}\vspace{.175cm}
+\[2^3 \cdot 7237005577332262213973186563042994240857116359379907606001950938285454250989\marginnote{src/ringct/ rctOps.h {\tt curve- Order()}}\]
+
+
+\subsection{Rappresentazione Binaria}
+\label{binary_note}
+Gli elementi di \(\mathbb{F}_{2^{255} - 19} \) sono codificati come interi a 256 bit, quindi possono essere rappresentati usando 32 byte. Poiché ogni elemento richiede solo 255 bit, il bit più significativo è sempre zero.
+
+Mentre, qualsiasi punto su una curva Ed25519 può essere espresso usando 64 byte. Tuttavia, applicando tecniche di {\em compressione dei punti}, descritte qui di seguito, è possibile ridurre questa dimensione della metà, ovvero a 32 byte.
+
+
+\subsection{Compressione dei Punti}
+\label{point_compression_section}
+
+I punti di una curva Ed25519 possono essere facilmente compressi, in modo che la rappresentazione di un punto occupi solo lo spazio di una coordinata. Non entreremo nei dettagli matematici necessari per giustificare questo, ma possiamo dare una breve intuizione di come funziona \cite{eddsa-ed25519-irtf}. Lo schema di compressione dei punti per la curva Ed25519 è stato descritto per la prima volta in \cite{Bernstein2012}, mentre il concetto è stato introdotto originariamente in \cite{Miller:point-compression-origin}.
+
+Questo schema di compressione deriva da una trasformazione dell’equazione della curva Twisted Edwards (assumendo \(a = -1\), valido per Monero):\vspace{0.175cm} 
+\[x^2 = \frac{y^2 - 1}{d y^2 + 1}\]\\
+Questa formula\footnote{\(d = - \frac{121665}{121666}\), in questo caso.} indica che per ogni valore di \(y\) esistono due possibili valori di \(x\) (positivo o negativo). Gli elementi del campo \(x\) e \(y\) sono calcolati modulo \(q\), quindi non esistono valori negativi propriamente detti. Tuttavia, calcolare modulo \(q\) di \(-x\) cambia la parità del numero poiché \(q\) è dispari. Per esempio: \(3 \pmod{5} = 3\), mentre \(-3 \pmod{5} = 2\). In altre parole, gli elementi di campo \(x\) e \(-x\) differiscono per la loro parità.
+
+Si supponga di conoscere un punto della curva dove \(x\) è pari. Calcolando l’equazione trasformata con \(y\) si ottiene un numero dispari, allora è possibile dedurre che negando quel numero otterremo il valore corretto di \(x\). Un singolo bit può trasmettere questa informazione, e per comodità la coordinata \(y\) ha un bit extra.
+
+Supponiamo di voler comprimere il punto \((x, y)\).
+
+\begin{description}
+	\item[Codifica] Impostiamo\marginnote{src/crypto/ crypto\_ops\_ builder/ ref10Comm- entedComb- ined/\\ ge\_to- bytes.c} il bit più significativo di \(y\) a 0 se \(x\) è pari, e a 1 se \(x\) è dispari. Il valore risultante \(y'\) rappresenterà il punto sulla curva.
+	
+	\item[Decodifica] \hfill
+	    \begin{enumerate}
+    	    \item Recuperiamo\marginnote{ge\_from- bytes.c}[2.05cm] il punto compresso \(y'\), quindi copiamo il suo bit più significativo nel bit di parità \(b\) prima di azzerarlo. Ora abbiamo di nuovo il valore originale di \(y\).
+    	    \item Poniamo \(u = y^2 - 1 \pmod q\) e \(v = d y^2 + 1 \pmod q\). Ciò significa che \(x^2 = u / v \pmod q\).
+    	    \item Calcoliamo\footnote{Poiché \(q = 2^{255} - 19 \equiv 5 \pmod{8}\), \((q-5)/8\) e \((q-1)/4\) sono interi.} \[z = u v^3 (u v^7)^{(q-5)/8} \pmod q.\]
+            \begin{enumerate}
+                \item Se \(v z^2 = u \pmod q\), allora \(x' = z\).
+                \item Se \(v z^2 = -u \pmod q\), calcoliamo \(x' = z \cdot 2^{(q-1)/4} \pmod q\).
+            \end{enumerate}
+            \item Usando il bit di parità \(b\) del primo passo, se \(b \ne\) il bit meno significativo di \(x'\), allora \(x = -x' \pmod q\), altrimenti \(x = x'\).
+            \item Restituiamo il punto decompressato \((x, y)\).
+	    \end{enumerate}
+\end{description}
+
+Le implementazioni di Ed25519 (come quella di Monero) usano tipicamente il generatore \(G = (x, 4/5)\) \cite{Bernstein2012}, dove \(x\) è la variante ‘pari’, ovvero con \(b = 0\), basata sulla decompressione del punto \(y = 4/5 \pmod q\).
+
+
+\subsection{Algoritmo di Firma EdDSA}
+\label{EdDSA_section}
+
+Bernstein e il suo team hanno sviluppato numerosi algoritmi basati sulla curva Ed25519.\footnote{\label{group_ops_twisted_edwards_note}Si veda\marginnote{src/crypto/ crypto\_ops\_ builder/ ref10Comm- entedComb- ined/} \cite{Bernstein2007} per operazioni di gruppo efficienti sulle curve Twisted Edwards (ad esempio somma di punti, raddoppio, somma mista, ecc.). Si veda \cite{curve25519} per aritmetica modulare efficiente.} 
+A scopo illustrativo, sarà descritta una versione altamente ottimizzata e sicura dell’algoritmo di firma ECDSA che, secondo gli autori, permette di produrre oltre 100.000 firme al secondo usando un processore Intel Xeon standard \cite{Bernstein2012}. L’algoritmo è descritto anche nell’RFC Internet 8032 \cite{rfc8032}. Si noti che si tratta di uno schema di firma molto simile a Schnorr.
+
+Tra le varie caratteristiche, invece di generare interi casuali ogni volta, utilizza un valore hash derivato dalla chiave privata del firmatario e dal messaggio stesso. Questo evita vulnerabilità legate all’implementazione di generatori di numeri casuali. Inoltre, un altro obiettivo dell’algoritmo è evitare l’accesso a locazioni di memoria riservata (o in maniera imprevedibile) per prevenire i cosiddetti {\em attacchi basati sui tempi di cache} (\emph{cache timing attacks}) \cite{Bernstein2012}.
+
+Di seguito è riportata una sintesi dei passi eseguiti dall’algoritmo. Una descrizione completa e un esempio di implementazione in Python sono disponibili in \cite{rfc8032}. 
+
+\subsubsection*{Firma}
+
+\begin{enumerate}
+	\item Sia \(h_k\) l’hash \(\mathcal{H}(k)\) della chiave privata \(k\) del firmatario. 
+	Calcoliamo \(\alpha\) come hash \(\alpha = \mathcal{H}(h_k, \mathfrak{m})\) dell’hash della chiave privata e del messaggio. A seconda dell’implementazione, \(\mathfrak{m}\) può essere il messaggio originale oppure il suo hash \cite{rfc8032}.
+	
+	\item Calcolare \(\alpha G\) e la sfida \(ch = \mathcal{H}([\alpha G], K, \mathfrak{m})\).
+
+	\item Calcolare la risposta \(r = \alpha + ch \cdot k \).
+	
+	\item La firma è la coppia \((\alpha G, r)\).
+\end{enumerate}
+
+\subsubsection*{Verifica}
+La verifica si effettua come segue:
+
+\begin{enumerate}
+	\item Calcolare \(ch' = \mathcal{H}([\alpha G], K, \mathfrak{m})\).
+	
+	\item Se vale l’uguaglianza 
+	\[
+	2^c r G \stackrel{?}{=} 2^c \alpha G + 2^c ch' \cdot K,
+	\]
+	allora la firma è valida.
+\end{enumerate}
+
+Il termine \(2^c\) deriva dalla forma generale dell’algoritmo EdDSA descritta da Bernstein {\em et al.} \cite{Bernstein2012}. Secondo quel documento, anche se non è strettamente necessario per una verifica adeguata, rimuovere \(2^c\) fornisce equazioni più robuste.
+
+La chiave pubblica \(K\) può essere un qualsiasi punto della curva ellittica, ma è preferibile utilizzare punti appartenenti al sottogruppo generato da \(G\). Moltiplicare per il cofattore \(2^c\) garantisce che tutti i punti siano in quel sottogruppo. In alternativa, il verificatore può controllare che \(l K \stackrel{?}{=} 0\), che è verificata solo se \(K\) appartiene effettivamente al sottogruppo. Non si conoscono vulnerabilità legati a questi metodi, e come vedremo, il secondo metodo è importante in Monero (Sezione \ref{blsag_note}).
+
+In questo schema di firma viene memorizzato un punto EC e uno scalare, e si dispone di una chiave pubblica EC.
+
+\subsubsection*{Perché Funziona}
+\begin{align*}
+2^c r G &= 2^c (\alpha + \mathcal{H}([\alpha G], K, \mathfrak{m}) \cdot k) \cdot G \\
+&= 2^c \alpha G + 2^c \mathcal{H}([\alpha G], K, \mathfrak{m}) \cdot K.
+\end{align*}
+
+\subsubsection*{Rappresentazione Binaria}
+
+Di default, una firma EdDSA richiederebbe \(64 + 32\) byte per il punto EC \(\alpha G\) e lo scalare \(r\). Tuttavia, l’RFC8032 assume che il punto \(\alpha G\) sia compresso, riducendo lo spazio necessario a soli \(32 + 32\) byte. Qui includiamo anche la chiave pubblica \(K\), per un totale di \(32 + 32 + 32\) byte.
+
+
+
+\section{Operatore Binario XOR}
+\label{sec:XOR_section}
+
+L’operatore binario XOR è uno strumento utile che apparirà nelle Sezioni \ref{sec:integrated-addresses} e \ref{sec:pedersen_monero}. Prende due argomenti e restituisce vero se uno, ma non entrambi, è vero \cite{wolfram-xor}. Ecco la relativa tabella di verità:
+
+\begin{center}
+    \begin{tabular}{|c|c|c|}
+    \hline
+        A & B & A XOR B \\
+    \hline\hline
+        V & V & F \\
+    \hline
+        V & F & V \\
+    \hline
+        F & V & V \\
+    \hline
+        F & F & F \\
+    \hline
+    \end{tabular}
+\end{center}
+
+Nel contesto dell’informatica, XOR è equivalente alla somma bit a bit modulo 2. Ad esempio, lo XOR di due coppie di bit:
+\begin{alignat*}{1}
+    \text{XOR}(\{1,1\},\{1,0\}) &= \{1+1,1+0\} \pmod 2 \\
+                                &= \{0,1\} 
+\end{alignat*}
+
+Anche queste combinazioni producono \(\{0,1\}\): \(\text{XOR}(\{1,0\},\{1,1\})\), \(\text{XOR}(\{0,0\},\{0,1\})\) e \(\text{XOR}(\{0,1\},\{0,0\})\). Per input XOR di \(b\) bit, ci sono \(2^{b} - 1\) altre combinazioni di input che producono lo stesso output. Ciò significa che se \(C = \text{XOR}(A,B)\) e \(A \in_R \{0,...,2^{b}-1\}\), un osservatore che conosce \(C\) non ottiene alcuna informazione su \(B\).
+
+Allo stesso tempo, chiunque conosca due degli elementi in \(\{A,B,C\}\), con \(C = \text{XOR}(A,B)\), può calcolare il terzo elemento, ad esempio \(A = \text{XOR}(B,C)\). XOR indica se due elementi sono diversi o uguali, quindi conoscere \(C\) e \(B\) è sufficiente per determinare \(A\). Un’attenta analisi della tabella di verità rivela questa caratteristica fondamentale.\footnote{Una interessante applicazione di XOR (non collegata a Monero) è lo scambio di due registri di bit senza un terzo registro. Il simbolo \(\oplus\) è usato per indicare l’operazione XOR. Poiché \(A \oplus A = 0\), dopo tre operazioni XOR tra i registri si ottiene: \(\{A, B\} \rightarrow \{[A \oplus B], B\} \rightarrow \{[A \oplus B], B \oplus [A \oplus B]\} = \{[A \oplus B], A \oplus 0\} = \{[A \oplus B], A\} \rightarrow \{[A \oplus B] \oplus A, A\} = \{B, A\}\).}

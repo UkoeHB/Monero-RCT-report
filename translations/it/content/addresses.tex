@@ -1,0 +1,167 @@
+\chapter{Indirizzi Monero}
+\label{chapter:addresses}
+
+In generale, la proprietà di un quantitativo di valuta digitale su blockchain è conferita dai cosiddetti `indirizzi'. Gli indirizzi contengono le monete (output) ricevute e solo il proprietario ne detiene la capacità di spesa.\footnote{La probabilità che un soggetto esterno sia in grado di spendere le monete non di sua proprietà è altamente trascurabile.}
+
+Precisamente, un indirizzo detiene gli output ricevuti attraverso transazioni, che sono come delle note che conferiscono al proprietario dell'indirizzo di destinazione il diritto di spendere un certo ammontare di denaro. Ad esempio, una certa nota potrebbe indicare che ``l'indirizzo C detiene 5.3 XMR".
+
+Per spendere un output detenuto, il proprietario dell'indirizzo può specificarlo come input di una nuova transazione. Questa nuova transazione produrrà dei nuovi output che saranno assegnati ad altri indirizzi (o agli indirizzi del proprietario, se desiderato). La somma degli input di una transazione è uguale alla somma dei suoi output, inoltre, gli output possono essere spesi soltanto una volta. Carol, proprietaria dell'indirizzo C, può specificare l'output ricevuto in una nuova transazione (ad esempio ``In questa transazione vorrei spendere quel determinato output ricevuto.") ed aggiungere una nota la quale indica ``l'Indirizzo B adesso detiene 5.3 XMR".
+
+Il saldo di un indirizzo equivale alla somma di tutti gli importi contenuti negli output non spesi detenuti da quel particolare indirizzo.\footnote{Le applicazioni software conosciute come portafogli (wallet) sono utilizzati per organizzare gli output detenuti da uno o più indirizzi, gestire le chiavi private per l'autorizzazione di nuove transazioni e di inviarle al network per la verifica e l'inclusione nella blockchain.}
+
+Nel Capitolo \ref{chapter:pedersen-commitments} vengono trattate le modalità di offuscamento degli importi, nel Capitolo \ref{chapter:transactions} la struttura delle transazioni (che include come dimostrare che si sta spendendo un output posseduto e precedentemente non speso, senza nemmeno rivelare quale output venga effettivamente speso), ed infine nel Capitolo \ref{chapter:blockchain} il processo di estrazione (mining) della moneta ed il ruolo degli osservatori esterni.
+
+
+
+\section{Chiavi Utente}
+\label{sec:user-keys}
+
+A differenza di Bitcoin, gli utenti Monero dispongono di due set di chiavi private e pubbliche, \((k^v, K^v)\) e \( (k^s, K^s) \). Nella Sezione \ref{ec:keys} vengono trattate le modalità di creazione di questi set di chiavi.
+
+In generale, l'{\em indirizzo}\marginnote{src/ common/ base58.cpp {\tt encode\_ addr()}} di un utente coincide con la coppia di chiavi pubbliche \((K^v, K^s)\). Le chiavi private invece, corrispondono alla coppia \( (k^v, k^s) \).\footnote{Per comunicare l'indirizzo ad un altro utente, è di comune uso codificarlo in base58, uno schema di codifica binary-to-text concepito inizialmente per Bitcoin \cite{base-58-encoding}. Vedi \cite{luigi-address} per maggiori dettagli.}
+\\
+
+L'utilizzo di due set di chiavi consente la segregazione delle funzioni (separazione dei compiti). La motivazione diventerà chiara più avanti in questo capitolo, ma per il momento ci limitiamo a definire la chiave privata $k^v$ come {\em chiave di visualizzazione} (view key), e $k^s$ come {\em chiave di spesa} (spend key). Una persona può usare la propria chiave di visualizzazione per determinare se un output appartiene al proprio indirizzo, mentre la chiave di spesa permette di spendere quel determinato output in una transazione (e, retroattivamente, capire se è stato speso).\footnote{È\marginnote{src/wallet/ api/wallet.cpp {\tt create()} wallet2.cpp {\tt generate()} {\tt get\_seed()}} di comune uso indicare la chiave di visualizzazione $k^v$ come risultato dell'operazione $\mathcal{H}_n(k^s)$. Questo significa che una persona deve conservare solo la propria chiave di spesa $k^s$ per accedere (visualizzare e spendere) a tutti gli output di cui è proprietaria (spesi e non). La chiave di spesa è solitamente rappresentata come una serie di 25 parole (dove la 25ª parola è un checksum). Altri metodi, meno comuni, includono: generare $k^v$ e $k^s$ come numeri casuali indipendenti, oppure generare una lista mnemonica casuale composta da 12 parole $a$, in cui
+\[
+k^s = {\tt sc\_reduce32}(\mathit{Keccak}(a)) \quad \text{e} \quad k^v = {\tt sc\_reduce32}(\mathit{Keccak}(\mathit{Keccak}(a))).
+\]
+\cite{luigi-address}}
+
+
+\section{Indirizzi Monouso (One-time)}
+\label{sec:one-time-addresses}
+
+Un utente Monero, al fine di ricevere denaro, può distribuire i suoi indirizzi ad altri utenti, i quali potranno inviare output attraverso transazioni.
+
+L'indirizzo di destinazione non è mai utilizzato direttamente in una transazione.\footnote{Il metodo qui descritto non è imposto dal protocollo, ma solo dagli standard di implementazione dei portafogli Monero. Ciò significa che un portafoglio alternativo potrebbe seguire lo stile di Bitcoin, dove gli indirizzi dei destinatari sono inclusi direttamente nei dati delle transazioni. Un portafoglio di questo tipo, chiaramente non conforme, produrrebbe transazioni con output inutilizzabili da altri portafogli e ogni indirizzo in stile Bitcoin potrebbe essere utilizzato una sola volta a causa dell'unicità dell'immagine della chiave.} Invece, viene attuato uno scambio in stile Diffie-Hellman, creando un unico {\em indirizzo monouso univoco (one-time)} per ogni output della transazione da inviare all'utente. In questa maniera anche gli osservatori esterni che conoscono tutti gli indirizzi dell'utente non saranno in grado di utilizzarli per identificare quali output di transazioni appartengono ad essi.\footnote{Eccetto con trascurabile probabilità.}
+
+%A recipient can spend their received outputs by signing a message with the one-time addresses, thereby proving they know the private keys and therefore own what they are spending. We will gradually flesh out this concept.
+%\\
+
+Iniziamo con una transazione fittizia molto semplice, contenente esattamente un solo output --- un pagamento di importo `0' da Alice a Bob.
+
+Bob possiede le chiavi private e pubbliche $(k_B^v, k_B^s)$ e $(K_B^v, K_B^s)$, mentre Alice conosce le chiavi pubbliche (dunque il suo indirizzo) di Bob. La transazione tra Alice e Bob potrebbe svolgersi come segue \cite{cryptoNoteWhitePaper}:
+
+\begin{enumerate}
+    \item Alice genera un numero casuale $r \in_R \mathbb{Z}_l$, e calcola l’indirizzo one-time\footnote{In\marginnote{src/crypto/ crypto.cpp {\tt generate\_ key\_deri- vation()}} Monero, ogni istanza (incluso quando viene usato in altre parti della transazione) di $r k^v G$ viene moltiplicata per il cofattore 8, quindi in questo caso Alice calcola $8*r K^v_B$ e Bob calcola $8*k^v_B r G$. Per quanto ne sappiamo, questo non serve a nulla (ma è {\em comunque} una regola da seguire). Moltiplicare per il cofattore garantisce che il punto risultante appartenga al sottogruppo di $G$, ma se $R$ e $K^v$ non condividono un sottogruppo all'inizio, allora i logaritmi discreti $r$ e $k^v$ non possono comunque essere usati per creare un segreto condiviso.}\vspace{.175cm}
+	\[K^o  = \mathcal{H}_n(r K_B^v)G + K_B^s\marginnote{src/crypto/ crypto.cpp {\tt derive\_pu- blic\_key()}}\]
+
+    \item Alice imposta $K^o$ come destinatario del pagamento, aggiunge l’importo dell’output ‘0’ e il valore $r G$ ai dati della transazione, e la invia alla rete.
+
+	\item Bob\marginnote{src/crypto/ crypto.cpp {\tt derive\_ subaddress\_ public\_ key()}} riceve i dati e vede i valori $r G$ e $K^o$. Dunque calcola $k_B^v r G = r K_B^v$. Ed in seguito $K'^s_B = K^o - \mathcal{H}_n(r K_B^v)G$. Se Bob verifica che $K'^s_B = K_B^s$, significa che l’output è indirizzato a lui.\footnote{$K'^s_B$ è calcolato con {\tt derive\_subaddress\_public\_key()} perché le chiavi di spesa di un indirizzo normale sono memorizzate all’indice 0 nella tabella di lookup delle chiavi di spesa, mentre gli indirizzi secondari si trovano agli indici 1, 2... Questo avrà senso a breve, vedi Sezione \ref{sec:subaddresses}.}
+
+	La chiave privata $k_B^v$ è detta chiave di visualizzazione (view key) perché chiunque la possieda (insieme alla chiave pubblica di spesa $K_B^s$ di Bob) può calcolare $K'^s_B$ per ogni output di transazione nella blockchain (registro delle transazioni), e vedere quali di essi appartengono a Bob.
+
+	\item Le chiavi one-time per l’output sono:\vspace{.175cm}
+	\begin{align*}
+		K^o &= \mathcal{H}_n(r K_B^v)G + K_B^s = (\mathcal{H}_n(r K_B^v) + k_B^s)G  \\ 
+		k^o &= \mathcal{H}_n(r K_B^v) + k_B^s
+	\end{align*}
+\end{enumerate}
+
+Per spendere il suo output da `0 XMR' [sic] in una nuova transazione, tutto ciò che Bob deve fare è dimostrare di possederlo firmando un messaggio con la chiave one-time $K^o$. La chiave privata $k_B^s$ è detta chiave privata di spesa (private spend key) poiché è necessaria per dimostrare la proprietà dell’output, mentre $k_B^v$ è la chiave privata di visualizzazione (view key) poiché può essere usata per trovare gli output spendibili da Bob.
+
+Come sarà chiaro nel Capitolo \ref{chapter:transactions}, senza $k^o$ Alice non può calcolare l’immagine chiave (key image) dell’output, quindi non potrà mai sapere con certezza se Bob spende l’output che gli ha inviato.\footnote{Supponiamo che Alice produca due transazioni, ciascuna contenente lo stesso indirizzo one-time $K^o$ che Bob può spendere. Poiché $K^o$ dipende solo da $r$ e $K_B^v$, non c’è motivo per cui non possa farlo. Bob può spendere solo uno di quegli output, poiché ogni indirizzo one-time ha una sola immagine di chiave. Se non fa attenzione, Alice potrebbe ingannarlo. Potrebbe creare la transazione 1 con molti soldi per Bob, e poi la transazione 2 con una piccola somma. Se lui spende i fondi della 2, non potrà mai più spendere quelli della 1. In effetti, nessuno potrebbe spendere i fondi della 1, `bruciandoli' di fatto. I wallet Monero sono progettati per ignorare l'importo più piccolo in questo scenario.}
+
+Bob potrebbe fornire la sua view key a una terza parte. Questa terza parte potrebbe essere un custode di fiducia, un revisore, un’autorità fiscale, ecc. Qualcuno a cui può essere concesso l’accesso in sola lettura alla cronologia delle transazioni dell’utente, senza altri privilegi. Questa terza parte sarebbe anche in grado di decifrare l’importo dell’output (come sarà spiegato nella Sezione \ref{sec:pedersen_monero}). Vedi il Capitolo \ref{chapter:tx-knowledge-proofs} per consultare altri modi in cui Bob può fornire informazioni sulla sua cronologia delle transazioni.
+
+
+\subsection{Transazioni Multi-Output}
+\label{sec:multi_out_transactions}
+
+La maggior parte delle transazioni conterrà più di un singolo output. Ciò avviene anche solo per restituire il `resto' al mittente.\footnote{In realtà, a partire dal protocollo v12, sono {\em richiesti} due output per ogni transazione (non miner), anche se ciò comporta che uno degli output abbia importo 0 ({\tt HF\_VERSION\_MIN\_2\_OUTPUTS}). Questo migliora l'indistinguibilità delle transazioni mescolando i casi con un solo output con le più comuni transazioni a due output. Prima della v12, il wallet principale già creava output di valore nullo. L'implementazione principale invia gli output con importo 0 a un indirizzo casuale.\marginnote{src/wallet/ wallet2.cpp {\tt transfer\_ selected\_ rct()}}}
+\footnote{Dopo l’introduzione dei Bulletproof nel protocollo v8, ogni transazione è stata limitata ad un massimo di 16 output ({\tt BULLETPROOF\_MAX\_OUTPUTS}). In precedenza non esisteva alcun limite, se non un vincolo sulla dimensione della transazione (in byte).} %BULLETPROOF_MAX_OUTPUTS; wallet2::transfer_selected_rct() for random address 0-amount
+
+I mittenti delle transazioni Monero di solito generano un valore casuale $r$. Il punto sulla curva $r G$ è comunemente noto come {\em chiave pubblica della transazione} (tx public key) ed è pubblicato insieme agli altri dati della transazione sulla blockchain.\\
+
+Per\marginnote{src/crypto- note\_core/ cryptonote\_ tx\_utils.cpp {\tt construct\_ tx\_with\_ tx\_key()}}[-.8cm] garantire che tutti gli indirizzi one-time in una transazione con $p$ output siano differenti, anche nei casi in cui lo stesso destinatario venga usato due volte, Monero utilizza un indice di output. Ogni output di una transazione ha un indice $t \in \{0, ..., p-1\}$. Aggiungendo questo valore al segreto condiviso prima di calcolare l’hash, si può garantire che gli indirizzi one-time risultanti siano univoci:\marginnote{src/crypto/ crypto.cpp {\tt derive\_pu- blic\_key()}}[1.2cm]\vspace{.175cm}%construct_tx_with_tx_key() indexes 0 to p-1
+\begin{align*}
+  K_t^o &= \mathcal{H}_n(r K_t^v, t)G + K_t^s = (\mathcal{H}_n(r K_t^v, t) + k_t^s)G  \\ 
+  k_t^o &= \mathcal{H}_n(r K_t^v, t) + k_t^s
+\end{align*}
+
+
+
+\section{Sottoindirizzi}
+\label{sec:subaddresses}
+
+Gli utenti Monero possono generare sottoindirizzi (subaddress) da ciascun indirizzo standard \cite{MRL-0006-subaddresses}. I fondi inviati a un sottoindirizzo possono essere visualizzati e spesi utilizzando le chiavi di visualizzazione e di spesa dell’indirizzo principale. Per analogia: un conto bancario online può avere più saldi corrispondenti a carte di credito e depositi, ma sono tutti accessibili e spendibili da un singolo gestore: il titolare del conto.\\
+
+I sottoindirizzi sono comodi per ricevere fondi nello stesso portafoglio quando un utente non vuole collegare tra loro le proprie attività pubblicando o usando lo stesso indirizzo. Come vedremo, la maggior parte degli osservatori dovrebbe risolvere il problema del logaritmo discreto (DLP) per determinare se un dato sottoindirizzo è derivato da un particolare indirizzo \cite{MRL-0006-subaddresses}.\footnote{Prima dei sottoindirizzi (introdotti con l’aggiornamento software corrispondente alla versione 7 del protocollo \cite{subaddress-pull-request}), gli utenti Monero potevano semplicemente generare molti indirizzi normali. Per visualizzare il saldo di ciascun indirizzo era necessaria una scansione separata della blockchain. Questo era molto inefficiente. Con i sottoindirizzi, gli utenti mantengono una tabella di ricerca delle chiavi di spesa (hashed), quindi una singola scansione della blockchain richiede lo stesso tempo per 1 sottoindirizzo o per 10.000 sottoindirizzi.}
+
+Sono utili anche per effettuare una distinzione degli output ricevuti. Ad esempio, se Alice vuole comprare una mela da Bob, Bob potrebbe scrivere una ricevuta per descrivere l’acquisto e creare un sottoindirizzo per quella ricevuta, poi chiedere ad Alice di usare quel sottoindirizzo quando gli invia il denaro. In questo modo, Bob può associare il denaro ricevuto alla mela venduta. Esploreremo un altro modo per distinguere e organizzare gli output ricevuti nella sezione successiva.%\footnote{Prima dell’introduzione dei sottoindirizzi nell’aprile 2018, gli sviluppatori di Monero supportavano un metodo chiamato Payment ID, che permetteva ai destinatari di distinguere tra gli output ricevuti. I Payment ID erano stringhe di testo incluse nei dati “extra” di una transazione. I destinatari potevano chiedere ai mittenti di includere un Payment ID nella transazione. I Payment ID potevano anche essere codificati insieme ai cosiddetti indirizzi integrati (integrated addresses). Poiché non influenzano la verifica delle transazioni, possono ancora essere usati da chiunque, ma dato che attualmente sono deprecati nei wallet più popolari, abbiamo scelto di non trattarli qui.}
+
+%\footnote{Nota che l’indice $i$ potrebbe essere altrettanto facilmente un hash generato da una password $\mathcal{H}_n(x)$. Questo permetterebbe al proprietario dell’indirizzo di visualizzare i fondi del sottoindirizzo con la chiave di visualizzazione dell’indirizzo principale, ma di poterli spendere solo fornendo la password. Attualmente non esistono implementazioni di wallet che proteggano con password i sottoindirizzi, né ci sono piani noti per svilupparne uno.}
+Bob\marginnote{src/device/ device\_de- fault.cpp {\tt get\_sub- address\_ secret\_ key()}} genera il suo $i^\text{mo}$ sottoindirizzo $(i = 1, 2, ...)$, a partire dal suo indirizzo principale (anche detto primary address), come coppia di chiavi pubbliche $(K^{v,i}, K^{s,i})$:\footnote{Si scopre che l’hash del sottoindirizzo è separato per dominio, quindi in realtà è $\mathcal{H}_n(T_{sub},k^v,i)$ dove $T_{sub} = $“SubAddr”. Omettiamo $T_{sub}$ in tutto il documento per brevità.}\vspace{.175cm}
+\begin{align*}
+    K^{s,i} &= K^s + \mathcal{H}_n(k^v, i) G\\
+    K^{v,i} &= k^v K^{s,i}
+\end{align*}
+\quad Dunque
+\begin{alignat*}{2}
+    K^{v,i} &= k^v&&(k^s + \mathcal{H}_n(k^v, i))G\\
+    K^{s,i} &= &&(k^s + \mathcal{H}_n(k^v, i))G
+\end{alignat*}
+    
+
+\subsection{Trasferimento Fondi ad un Sottoindirizzo}
+    
+Supponiamo che Alice voglia nuovamente inviare un ammontare pari a '0', ma questa volta al sottoindirizzo $(K_B^{v,1}, K_B^{s,1})$ di Bob.
+\begin{enumerate}
+	\item Alice genera un numero casuale $r \in_R \mathbb{Z}_l$, e calcola l'indirizzo one-time\vspace{.175cm}
+	\[ K^o  = \mathcal{H}_n(r K_B^{v,1},0)G + K_B^{s,1} \]
+
+	\item Alice imposta $K^o$ come indirizzo del pagamento, aggiunge l'output di ammontare '0' e il valore $r K_B^{s,1}$ ai dati della transazione, ed infine invia la transazione al network.
+    	
+    \item Bob\marginnote{src/crypto/ crypto.cpp {\tt derive\_ subaddress\_ public\_ key()}} riceve i dati e vede i valori $r K_B^{s,1}$ e $K^o$. Può calcolare $k_B^v r K_B^{s,1} = r K_B^{v,1}$. Può quindi calcolare $K'^{s}_B = K^o - \mathcal{H}_n(r K_B^{v,1},0)G$. Quando vede che $K'^{s}_B = K^{s,1}_B$, sa che la transazione è indirizzata a lui.\footnote{Un attaccante avanzato potrebbe riuscire a collegare sottoindirizzi \cite{janus-attack} (noto anche come attacco Janus). Con sottoindirizzi (uno dei quali può essere un indirizzo normale) $K_B^1$ $\&$ $K_B^2$ che l’attaccante pensa siano correlati, crea un output di transazione con $K^o = \mathcal{H}_n(r K_B^{v,2},0)G + K_B^{s,1}$ e include la chiave pubblica della transazione $r K_B^{s,2}$. Bob calcola $r K_B^{v,2}$ per trovare $K'^{s,1}_B$ ma non ha modo di sapere che è stata usata la chiave del suo {\em altro} (sotto)indirizzo! Se dice all’attaccante di aver ricevuto fondi su $K_B^1$, l’attaccante saprà che $K_B^2$ è un sottoindirizzo correlato (o indirizzo normale). Poiché i sottoindirizzi sono fuori dallo scopo del protocollo, le mitigazioni sono a carico degli implementatori dei wallet. Nessun wallet noto lo fa, e ogni mitigazione funzionerebbe solo per wallet conformi. Le mitigazioni possibili includono: non informare l’attaccante dei fondi ricevuti, includere la chiave privata di transazione cifrata $r$ nei dati della transazione, una firma Schnorr sul segreto condiviso usando $K^{s,1}$ come punto base invece di $G$, includere $rG$ nei dati della transazione e verificare il segreto condiviso con $rK^{s,1} \stackrel{?}{=} (k^s + \mathcal{H}_n(k^v, 1))*rG$ (richiede la chiave privata di spesa). Anche gli output ricevuti da un indirizzo normale devono essere verificati. Vedi \cite{janus-mitigation-issue-62} per una discussione sull’ultima mitigazione elencata.}
+
+Bob ha bisogno solo della sua chiave privata di visualizzazione $k_B^v$ e della chiave pubblica di spesa del sottoindirizzo $K^{s,1}_B$ per trovare gli output di transazione inviati al suo sottoindirizzo.
+
+    \item Le chiavi one-time per l’output sono:\vspace{.175cm}
+    \begin{align*}
+        K^o &= \mathcal{H}_n(r K_B^{v,1},0)G + K_B^{s,1} = (\mathcal{H}_n(r K_B^{v,1},0) + k_B^{s,1})G  \\ 
+        k^o &= \mathcal{H}_n(r K_B^{v,1},0) + k_B^{s,1}
+    \end{align*}
+    \end{enumerate}
+
+Ora,\marginnote{src/crypto- note\_core/ cryptonote\_ tx\_utils.cpp {\tt construct\_ tx\_with\_ tx\_key()}} la chiave pubblica della transazione di Alice è insolita per Bob ($r K_B^{s,1}$ invece di $r G$). Se crea una transazione con $p$ output di cui almeno uno destinato a un sottoindirizzo, Alice dovrà generare una chiave pubblica della transazione unica per ogni output $t \in \{0,...,p-1\}$. In altre parole, se Alice sta inviando al sottoindirizzo di Bob $(K_B^{v,1}, K_B^{s,1})$ e all’indirizzo di Carol $(K_C^v, K_C^s)$, sarà necessario specificare due chiavi pubbliche della transazione \{$r_1 K_B^{s,1},r_2 G$\} nei dati della transazione.\footnote{I\marginnote{src/crypto- note\_basic/ cryptonote\_ basic\_impl.cpp {\tt get\_account\_ address\_as\_ str()}} sottoindirizzi di Monero sono prefissati con ‘8’, separandoli dagli indirizzi normali che sono prefissati con ‘4’. Questo aiuta il mittente a scegliere la procedura corretta durante la costruzione della transazione.}\footnote{Ci sono alcune complessità sull'uso di chiavi pubbliche della transazione aggiuntive (vedi il percorso del codice {\tt transfer\_selected\_rct()} $\rightarrow$ {\tt construct\_tx\_and\_get\_tx\_key()} $\rightarrow$ {\tt construct\_tx\_with\_tx\_key()} $\rightarrow$ {\tt generate\_output\_ephemeral\_keys()} e {\tt classify\_addresses()}) relative agli output di resto dove l’autore della transazione conosce la chiave di visualizzazione del destinatario (dato che è sé stesso; anche il caso degli output di resto fittizi, creati quando è necessario un output di importo zero, poiché gli autori generano quegli indirizzi). Quando ci sono almeno due output non di resto e almeno uno dei destinatari è un sottoindirizzo, si procede nel modo normale spiegato sopra (un bug attuale nell’implementazione core aggiunge una chiave pubblica della transazione extra ai dati della transazione oltre a quelle aggiuntive, che non viene usata per nulla). Se solo l’output di resto è inviato ad un sottoindirizzo, oppure c’è un solo output non di resto ed è inviato ad un sottoindirizzo, allora si crea una sola chiave pubblica della transazione. Nel primo caso, la chiave pubblica della transazione è $rG$ e la chiave one-time del resto è (indice sottoindirizzo 1, usando il pedice $c$ per indicare le chiavi di resto) $K^o = \mathcal{H}_n(k^v_c r G,t)G + K_c^{s,1}$ usando la chiave di visualizzazione e la chiave di spesa del sottoindirizzo. Nel secondo caso, la chiave pubblica della transazione $r K^{v,1}$ si basa sulla chiave di visualizzazione del sottoindirizzo, e la chiave one-time del resto è $K^o = \mathcal{H}_n(k^v_c*r K^{v,1},t)G + K_c^s$. Questi dettagli aiutano a mescolare una porzione delle transazioni ai sottoindirizzi fra le più comuni transazioni agli indirizzi normali, e le transazioni a 2 output che compongono circa il 95\% del volume di transazioni a oggi.}
+
+
+
+\section{Indirizzi Integrati}
+\label{sec:integrated-addresses}
+
+Per distinguere gli output che riceve, un destinatario può richiedere al mittente di includere un {\em ID di pagamento (payment ID)} nei dati della transazione.\footnote{Attualmente, le implementazioni di Monero supportano solo un ID di pagamento per transazione, indipendentemente dal numero di output.} Ad esempio, se Alice vuole comprare una mela da Bob, Bob potrebbe scrivere una ricevuta che descrive l’acquisto e chiedere ad Alice di includere l'identificativo della ricevuta quando gli invia i soldi. In questo modo Bob può associare i soldi ricevuti alla mela che ha venduto.
+
+In passato i mittenti potevano comunicare i payment ID in chiaro, ma includerli manualmente nelle transazioni risultava scomodo, e la trasmissione in chiaro rappresenta un rischio per la privacy dei destinatari, che potrebbero esporre involontariamente le loro attività.\footnote{Questi ID di pagamento in chiaro di lunghezza (256 bit) sono stati deprecati nella versione 0.15 dell’implementazione core del software (coincidente con la versione 12 del protocollo del novembre 2019). Sebbene altri wallet possano ancora supportarli e permetterne l’inclusione nei dati della transazione, il wallet core li ignorerà.} Attualmente su\marginnote{src/crypto- note\_basic/ cryptonote\_ basic\_ impl.cpp {\tt get\_ account\_ integrated\_ address\_as\_ str()}} Monero, i destinatari possono integrare gli ID di pagamento nei loro indirizzi, fornendo tali {\em indirizzi integrati}, contenenti ($K^v$, $K^s$, ID di pagamento), ai mittenti. Gli ID di pagamento possono tecnicamente essere integrati in qualsiasi tipo di indirizzo, inclusi indirizzi standard, sottoindirizzi e indirizzi multifirme.\footnote{Per quanto a conoscenza degli autori, gli indirizzi integrati sono stati implementati solo per indirizzi standard.}
+
+I mittenti che inviano output a indirizzi integrati possono codificare gli ID di pagamento usando il segreto condiviso $r K_t^v$ e un’operazione XOR (ricordare la Sezione \ref{sec:XOR_section}), che i destinatari possono poi decodificare con la chiave pubblica della transazione appropriata e un’altra operazione XOR \cite{integrated-addresses}. La codifica degli ID di pagamento in questo modo consente inoltre ai mittenti di dimostrare di aver creato specifici output di transazione (ad esempio per audit, rimborsi, ecc.).\footnote{Poiché un osservatore esterno può riconoscere la differenza tra transazioni con e senza ID di pagamento, il loro utilizzo è considerato causa di una minore uniformità nella storia delle transazioni Monero. Per questo motivo, dal protocollo v10 l’implementazione core aggiunge un ID di pagamento cifrato fittizio\marginnote{src/crypto- note\_core/ cryptonote\_ tx\_utils.cpp {\tt construct\_ tx\_with\_ tx\_key()}} a tutte le transazioni con 2 output, la cui decodifica rivelerà una stringa di bit composta da solo zeri (si tratta di una buona pratica e non di una specifica del protocollo).}
+
+\subsubsection*{Codifica}
+
+Il\marginnote{src/device/ device\_de- fault.cpp {\tt encrypt\_ payment\_ id()}} mittente codifica l’ID di pagamento per includerlo nei dati della transazione\footnote{Per convenzione, in Monero gli ID di pagamento per gli indirizzi integrati sono lunghi 64 bit.}:\vspace{.175cm}
+\begin{align*}
+         k_{\textrm{mask}} &= \mathcal{H}_n(r K_t^v,\textrm{pid\_tag}) \\
+      k_{\textrm{payment ID}} &= k_{\textrm{mask}} \rightarrow \textrm{ridotto alla lunghezza in bit dell’ID di pagamento}\\
+  \textrm{payment ID codificato} &= \textrm{XOR}(k_{\textrm{payment ID}}, \textrm{ID di pagamento})
+\end{align*}
+
+Includiamo pid\_tag per garantire che $k_{\textrm{mask}}$ sia diverso dalla componente $\mathcal{H}_n(r K_t^v, t)$ negli indirizzi di output one-time.\footnote{In Monero, pid\_tag = {\tt ENCRYPTED\_PAYMENT\_ID\_TAIL} = 141. Ad esempio, in transazioni multi-input calcoliamo $\mathcal{H}_n(r K_t^v, t) \pmod l$ per garantire che si usi uno scalare minore dell’ordine del sottogruppo EC, ma dato che $l$ è lungo 253 bit e gli ID di pagamento solo 64 bit, applicare il modulo per codificare gli ID di pagamento non avrebbe senso, dunque non viene fatto.}
+
+\subsubsection*{Decodifica}
+
+Qualsiasi\marginnote{src/device/ device.hpp {\tt decrypt\_ payment\_ id()}} destinatario per cui l’ID di pagamento è stato creato può trovarlo usando la propria chiave privata di visualizzazione e la chiave pubblica della transazione $r G$:\footnote{I dati della transazione non indicano a quale output appartenga un ID di pagamento. I destinatari devono identificare i propri ID di pagamento.}\vspace{.175cm}
+\begin{align*}
+         k_{\textrm{mask}} &= \mathcal{H}_n(k_t^v r G,\textrm{pid\_tag}) \\
+      k_{\textrm{payment ID}} &= k_{\textrm{mask}} \rightarrow \textrm{ridotto alla lunghezza in bit dell’ID di pagamento}\\
+          \textrm{payment ID} &= \textrm{XOR}(k_{\textrm{payment ID}}, \textrm{payment ID codificato})
+\end{align*}
+
+Allo stesso modo, i mittenti possono decodificare gli ID di pagamento che avevano precedentemente codificato ricalcolando il segreto condiviso.
+
+
+
+\section{Indirizzi Multifirma}
+\label{sec:multisignature-addresses}
+
+Può risultare utile condividere la proprietà dei fondi tra più persone o indirizzi. Il Capitolo \ref{chapter:multisignatures} tratta questo argomento nel dettaglio.

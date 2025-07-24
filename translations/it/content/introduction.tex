@@ -1,0 +1,117 @@
+\chapter{Introduzione}
+\label{chapter:introduzione}
+
+Nel mondo digitale è spesso banale creare infinite copie di un’informazione, e apportare altrettante modifiche. Perché una valuta possa esistere in forma digitale ed essere ampiamente adottata, i suoi utilizzatori devono assicurarsi che la sua disponibilità sia rigidamente limitata. Chi riceve del quantitativo di denaro deve poter avere fiducia che non si tratti di monete false, né di monete clonate già inviate a qualcun altro. Per ottenere tutto ciò senza richiedere l’intervento di un'entità esterna, come un’autorità centrale, è necessario che sia la disponibilità della valuta sia l’intera cronologia delle transazioni siano pubblicamente verificabili.
+
+Possiamo utilizzare strumenti crittografici per fare in modo che i dati registrati in un database facilmente accessibile — la blockchain — siano virtualmente immutabili e non falsificabili, con una legittimità che non possa essere messa in discussione da nessuno.
+\\ \newline
+Le criptovalute consentono la memorizzazione delle transazioni all’interno della blockchain, che funge da registro pubblico\footnote{In questo contesto, "registro" consiste in un semplice un archivio di tutti gli eventi di generazione e scambio della moneta. In particolare, registra quanto denaro è stato trasferito in ciascun evento e a chi è stato destinato.} di tutte le operazioni effettuate con quella moneta. La maggior parte delle criptovalute registra le transazioni in chiaro, per facilitarne la verifica da parte della comunità di utenti.
+\\ \newline
+È evidente, però, che una blockchain trasparente contraddice ogni concetto elementare di privacy e fungibilità\footnote{``\textbf{Fungibile} significa capace di essere scambiato o sostituito con un altro bene equivalente nell’uso o nell’adempimento di un contratto. ... Esempi: ... denaro, ecc."\cite{mises-org-fungible} In una blockchain trasparente come quella di Bitcoin, le monete possedute da Alice possono essere distinte facilmente da quelle possedute da Bob in base alla cronologia delle transazioni associate a ciascuna moneta.
+Se la cronologia di Alice include transazioni legate ad attori considerati discutibili o addirittura criminali, le sue monete potrebbero essere considerate “macchiate” (tainted) \cite{bitcoin-big-bang-taint}, e quindi avere un valore inferiore rispetto a quelle di Bob, anche se l’importo posseduto è lo stesso.
+Alcune fonti autorevoli affermano che i Bitcoin appena coniati vengono scambiati con un sovrapprezzo rispetto a quelli usati, proprio perché privi di una cronologia \cite{new-bitcoin-premium}.}, poiché rende letteralmente pubblica la cronologia completa delle transazioni degli utenti.
+\\ \newline
+Per affrontare questa mancanza di privacy, gli utenti di criptovalute come Bitcoin possono offuscare le transazioni utilizzando indirizzi intermedi temporanei \cite{DBLP:journals/corr/NarayananM17}. Tuttavia, con gli strumenti adeguati, è possibile analizzare i flussi e, in larga misura, collegare i veri mittenti ai destinatari \cite{DBLP:journals/corr/ShenTuY15b, DK-police-tracing-btc, Andrew-Cox-Sandia, chainalysis-2020-report}.
+
+Al contrario, la criptovaluta Monero (si pronuncia Mo-ne-ro) cerca di risolvere il problema della privacy memorizzando sulla blockchain solo indirizzi monouso per la ricezione dei fondi, ed autorizzando l'invio dei fondi in ogni transazione tramite firme ad anello. Grazie a queste funzionalità, non esistono ad oggi tecniche generalmente efficaci per collegare i destinatari o rintracciare l’origine dei fondi.\footnote{A seconda del comportamento degli utenti, possono esserci casi in cui le transazioni risultano parzialmente analizzabili. Per un esempio concreto, si veda questo articolo:  \cite{monero-ring-heuristics-ryo}.}
+
+Inoltre, gli importi delle transazioni sulla blockchain di Monero sono nascosti grazie a costrutti crittografici, rendendo i flussi di valuta opachi e difficili da rilevare.
+
+Il risultato è una criptovaluta con un elevato livello di privacy e fungibilità.
+
+
+
+\section{Obiettivi}
+\label{sec:goals}
+
+Monero è una criptovaluta consolidata con oltre cinque anni di sviluppo \cite{bitmonero-launched, monero-history}, e mantiene un livello di adozione in costante crescita \cite{justin-defcon-2019-community-growth}.\footnote{\label{marketcap_note}In termini di capitalizzazione di mercato, Monero è rimasto stabile rispetto ad altre criptovalute. Era 14-esima nel Giugno 2018, e 12-esima il 5 Gennaio 2020; vedi \url{https://coinmarketcap.com/}.} Purtroppo, esiste poca documentazione che descriva i meccanismi su cui si basa.\footnote{Uno sforzo di documentazione disponibile su \url{https://monerodocs.org/}, ha alcunve voci utili, in particolare quelle relative alla Command Line Interface. La CLI è un portafoglio Monero accessibile da console/terminale. Ha più funzionalità rispetto ad altri portafogli Monero, al costo del sacrificio di un interfaccia user-friendly.}\footnote{Un altro, più generale, impegno nella documentazione è Mastering Monero che può essere trovato qui: \cite{mastering-monero}.} Ancora peggio, parti essenziali del suo impianto teorico sono state pubblicate in articoli non-peer-reviewed, spesso incompleti o contenenti errori. Per molte componenti fondamentali della teoria dietro Monero, l’unica fonte affidabile è il codice sorgente stesso.\footnote{Mr. Seguias ha creato un'ottima serie chiamata Monero Building Blocks \cite{monero-building-blocks}, che contiene un trattemento approfondito sulle prove di sicurezza crittografica utilizzate per giustificare lo schema di firme di Monero. Come con Da Zero a Monero: Prima Edizione \cite{ztm-1}, le serie di Seguias sono incentrate sulla versione v7 del protocollo.}
+
+Inoltre, per chi non ha una formazione in matematica, apprendere le basi della crittografia a curve ellittiche, ampiamente utilizzata in Monero, può risultare un percorso confuso e frustrante.\footnote{Un tentativo iniziale di spiegare i meccanismi di Monero \cite{MRL-0003-about-monero} che non ha però spiegato la crittografia a curve ellittiche, ed oltre ad essere incompleto, sono passati circa cinque anni dalla sua pubblicazione.}
+
+L'intenzione degli autori del presente documento è di migliorare questa situazione introducendo i concetti fondamentali necessari per comprendere la crittografia a curve ellittiche, passando in rassegna algoritmi e schemi crittografici, e raccogliendo informazioni approfondite sul funzionamento interno di Monero.
+
+Per offrire ai lettori la migliore esperienza possibile, gli autori si sono occupati di fornire una descrizione costruttiva e passo dopo passo della criptovaluta Monero.
+
+In questa seconda edizione del documento, è stata concentrata l’attenzione sulla versione 12 del protocollo Monero\footnote{Il `protocollo' è l'insieme di regole contro cui ogni nuovo blocco viene verificato prima di poter essere aggiunto alla blockchain. Questo insieme di regole include il `protocollo delle transazioni' (attualmente versione 2, RingCT), che sono regole generali riguardanti come una transazione deve essere costruita. Regole specifiche sulle transazioni possono, e spesso lo fanno, cambiare senza che cambi la versione del protocollo delle transazioni. Solo modifiche su larga scala alla struttura della transazione giustificano un aggiornamento del numero di versione.}, corrispondente alla versione 0.15.x.x della suite software Monero. Tutti i meccanismi relativi alle transazioni e alla blockchain descritti in questo documento fanno riferimento a tali versioni.\footnote{L'integrità e l'affidabilità del codice di Monero si basano sull'assunzione che un numero sufficiente di persone lo abbia revisionato, individuando la maggior parte o tutti gli errori significativi. I lettori non dovrebbero dare per scontate le nostre spiegazioni, ma sono invitati a verificare autonomamente che il codice faccia davvero ciò che dovrebbe. Se così non fosse, auspichiamo una divulgazione responsabile (\url{https://hackerone.com/monero}) per i problemi gravi, oppure una pull request su Github (\url{https://github.com/monero-project/monero}) per le questioni minori.}\footnote{Sono in corso ricerche e studi su diversi protocolli potenzialmente adatti alla prossima generazione di transazioni Monero, tra cui Triptych \cite{triptych-preprint}, RingCT3.0 \cite{ringct3-preprint}, Omniring \cite{omniring-paper} e Lelantus \cite{lelantus-preprint}.} Gli schemi di transazione obsoleti non sono stati trattati, nemmeno parzialmente, anche se potrebbero ancora essere supportati per motivi di retrocompatibilità. Lo stesso vale per le funzionalità della blockchain ormai superate. La prima edizione \cite{ztm-1} era invece riferita alla versione 7 del protocollo e alla versione 0.12.x.x della suite software.
+
+
+
+\section{Lettori}
+
+Abbiamo previsto che molti lettori si avvicineranno a questo manuale senza alcuna o con pochissima conoscenza di matematica discreta, strutture algebriche, crittografia\footnote{An extensive textbook on applied cryptography can be found here: \cite{applied-cryptography-textbook}.}, e blockchain. Gli autori hanno cercato di essere sufficientemente completi nella trattazione dei vari argomenti affinché persone comuni, provenienti da qualsiasi ambito, possano apprendere il funzionamento di Monero senza dover ricorrere a ricerche esterne.
+
+La scelta di omettere — o relegare come note a piè di pagina — alcuni tecnicismi matematici è voluta, in quanto questi avrebbero compromesso la chiarezza dell’esposizione. Sono stati evitati anche alcuni dettagli concreti di implementazione non ritenuti essenziali. L'obiettivo è stato quello di presentare l’argomento a metà strada tra la crittografia matematica e la programmazione informatica, puntando alla completezza e alla chiarezza concettuale.\footnote{Alcune note a piè di pagina, soprattutto nei capitoli relativi al protocollo, introducono capitoli o sezioni successivi. Ciò è voluto per rendere il concetto più chiaro a una seconda lettura, poiché di solito includono dettagli implementativi specifici utili solo a chi ha una conoscenza approfondita del funzionamento di Monero.}
+
+
+
+\section{Le Origini di Monero}
+
+La criptovaluta Monero, inizialmente nota come BitMonero, è stata creata nell’aprile del 2014 come implementazione della \emph{Proof of Concept} di criptovaluta CryptoNote \cite{bitmonero-launched}. Monero significa denaro in Esperanto, e la sua forma plurale è Moneroj (mo-ne-roi, simile a Moneros ma con la "j" pronunciata come in orange).
+
+CryptoNote è un protocollo ideato da più individui. Un Whitepaper fondamentale che lo descrive è stato pubblicato nell’ottobre 2013 da un utente sotto lo pseudonimo di Nicolas van Saberhagen \cite{cryptoNoteWhitePaper}. Questo sistema offre anonimato per il destinatario attraverso l’uso di indirizzi monouso, e offuscamento del mittente mediante le firme ad anello.
+
+Fin dalla sua nascita ad oggi, Monero ha ulteriormente potenziato i propri aspetti legati alla privacy, implementando anche il mascheramento degli importi, come descritto da Greg Maxwell (e altri) in \cite{Signatures2015BorromeanRS}, integrato nelle firme ad anello seguendo le raccomandazioni di Shen Noether \cite{MRL-0005-ringct}, e successivamente reso più efficiente con l’adozione dei Bulletproof \cite{Bulletproofs_paper}.
+
+
+
+\section{Struttura}
+
+Come accennato precedentement, l'obiettivo è offrire una descrizione per un lettura autonoma, spiegando passo dopo passo, la criptovaluta Monero. Il presente documento, Da Zero a Monero, è stato strutturato per raggiungere questo scopo, guidando il lettore attraverso tutte le componenti del funzionamento interno della criptovaluta.
+
+
+\subsection{Parte 1: Elementi Essenziali}
+
+Nel percorso verso la completezza, è stato deciso di presentare tutti gli elementi base della crittografia necessari per comprendere la complessità di Monero, insieme ai loro fondamenti matematici. Nel Capitolo \ref{chapter:basicConcepts} vengono sviluppati gli aspetti fondamentali della crittografia a curve ellittiche.
+
+Il Capitolo \ref{chapter:advanced-schnorr} approfondisce lo schema di firma di Schnorr introdotto nel capitolo precedente, e presenta gli algoritmi di firme ad anello utilizzati per garantire la riservatezza delle transazioni.
+
+Il Capitolo \ref{chapter:addresses} spiega come Monero usa gli indirizzi per conferire la proprietà dei fondi, e i diversi tipi di indirizzi esistenti.
+
+Nel Capitolo \ref{chapter:pedersen-commitments} vengono introdotti i meccanismi crittografici utilizzati per nascondere gli importi delle transazioni.
+
+Una volta illustrate tutte le componenti, nel Capitolo \ref{chapter:transactions}, è descritto nel dettaglio lo schema di transazione adottato da Monero.
+
+Infine, nel Capitolo \ref{chapter:blockchain}, è analizzato il funzionamento della blockchain di Monero. .
+
+
+\subsection{Parte 2: Estensioni}
+
+Una criptovaluta è più della semplice implementazione del protocollo su cui si basa, e nella sezione Estensioni sono tratti una serie di concetti diversi, molti dei quali non sono ancora stati implementati.\footnote{Si noti che le future versioni del protocollo di Monero, in particolare quelle che implementano nuovi protocolli di transazione, potrebbero rendere una o tutte queste idee impraticabili o impossibili da implementare.}
+
+È possibile dimostrare varie informazioni su una transazione agli osservatori esterni, e questi metodi costituiscono il contenuto del Capitolo \ref{chapter:tx-knowledge-proofs}.
+
+Pur non essendo essenziali per il funzionamento di Monero, le multifirme (multisignature) sono molto utili, poiché permettono a più persone di inviare e ricevere denaro in modo collaborativo. Il Capitolo \ref{chapter:multisignatures} descrive l’attuale approccio di Monero alle multifirme e delinea possibili sviluppi futuri in quest’area.%This is formally called (N-1)-of-N and N-of-N threshold authentication.
+
+Di fondamentale importanza è l’applicazione delle multifirme alle interazioni tra venditori e acquirenti nei marketplace online. Il Capitolo \ref{chapter:escrowed-market} presenta un progetto originale di marketplace con escrow basato sulle multisignature di Monero ideato dall'autore di questo documento.
+
+Presentato per la prima volta in questo documento, TxTangle, descritto nel Capitolo \ref{chapter:txtangle}, è un protocollo decentralizzato per unire le transazioni di più individui in una singola operazione.
+
+
+\subsection{Contenuti Aggiuntivi}
+
+L'appendice \ref{appendix:RCTTypeBulletproof2} spiega la struttura di una transazione di esempio dalla blockchain. L'appendice \ref{appendix:block-content} descrive la struttura dei blocchi, comprese le intestazioni (header) e transazioni di mining, all’interno della blockchain di Monero. Infine, l'appendice \ref{appendix:genesis-block} chiude il documento spiegando la struttura del blocco di genesi di Monero. Questi appendici forniscono un collegamento tra gli elementi teorici trattati nelle sezioni precedenti e la loro implementazione concreta.
+
+Usiamo\marginnote{Non pensi che sia utile?} delle note a margine per indicare dove è possibile trovare dettagli sull’implementazione di Monero all’interno del codice sorgente.\footnote{Le nostre note a margine sono accurate per la versione 0.15.x.x della suite software Monero, ma potrebbero diventare gradualmente inaccurate poiché il codice sorgente è in continuo cambiamento. Tuttavia, il codice è conservato in un repository git (\url{https://github.com/monero-project/monero}), quindi è disponibile una cronologia completa delle modifiche.} Di solito viene indicato un percorso di file, ad esempio src/ringct/rctOps.cpp, e una funzione, come \(\textrm{{\tt ecdhEncode()}}\). Nota: il simbolo `-' indica un testo suddiviso, come crypto- note $\rightarrow$ cryptonote, e omettiamo quasi sempre i qualificatori di namespace (es. {\tt Blockchain::}).
+
+
+
+\section{Avviso}
+
+Tutti gli schemi di firma, le applicazioni delle curve ellittiche e i dettagli dell’implementazione di Monero devono essere considerati solo a scopo descrittivo. I lettori che intendono utilizzare queste conoscenze per applicazioni pratiche serie (e non solo per esplorazioni amatoriali) dovrebbero consultare le fonti primarie e le specifiche tecniche (che abbiamo citato ove possibile). Gli schemi di firma richiedono prove di sicurezza ben validate, mentre i dettagli di implementazione di Monero sono disponibili nel codice sorgente di Monero. In particolare, come si suol dire in ambiti di sicurezza, “non reinventare la crittografia”. Il codice che implementa primitive crittografiche dovrebbe essere accuratamente revisionato da esperti ed avere una lunga storia di affidabilità. Inoltre, i contributi originali presenti in questo documento potrebbero non essere stati adeguatamente revisionati e potrebbero non essere stati testati, quindi si invita il lettore a utilizzare il proprio giudizio nel leggerli.
+
+
+
+\section{Storia di Da Zero a Monero}
+
+Da Zero a Monero è un’espansione della tesi di laurea magistrale di Kurt Alonso, `Monero - Privacy in the Blockchain' \cite{kurt-original}, pubblicata nel maggio del 2018. La prima edizione di questo documento è stata pubblicata circa un mese dopo, nel giugno 2018 \cite{ztm-1}.
+
+Nella seconda edizione sono state migliorate le modalità in cui vengono introdotte le firme ad anello (Capitolo \ref{chapter:advanced-schnorr}), riorganizzato la descrizione delle transazioni (aggiungendo il Capitolo \ref{chapter:addresses} sugli indirizzi Monero), modernizzato il metodo usato per comunicare gli importi delle uscite (Sezione \ref{sec:pedersen_monero}), sostituito le firme ad anello Borromean con Bulletproof (Sezione \ref{sec:range_proofs}), deprecato {\tt RCTTypeFull} (Capitolo \ref{chapter:transactions}), aggiornato e approfondito il sistema dinamico del peso dei blocchi e delle commissioni di rete (Capitolo \ref{chapter:blockchain}), analizzato le prove correlate alle transazioni (Capitolo \ref{chapter:tx-knowledge-proofs}), descritto le multifirme di Monero (Capitolo \ref{chapter:multisignatures}), progettato soluzioni per i marketplace con deposito a garanzia (escrow) (Capitolo \ref{chapter:escrowed-market}), proposto un nuovo protocollo decentralizzato per l'unione di transazioni chiamato TxTangle (Capitolo \ref{chapter:txtangle}), aggiornato e aggiunto vari dettagli per allinearsi alla versione del protocollo più recente (v12) e alla suite software di Monero (v0.15.x.x), ed infine è stato revisionato il documento per migliorarne la leggibilità.\footnote{Il codice sorgente \LaTeX{} di Da Zero a Monero può essere trovato qui (prima edizione nel branch `ztm1'): \url{https://github.com/UkoeHB/Monero-RCT-report}.}
+
+
+
+\section{Ringraziamenti}
+\label{sec:ringraziamenti}
+
+Scritto dall’autore `koe'.
+
+Questo report non esisterebbe senza la tesi originale di Kurt \cite{kurt-original}, a cui devo grande riconoscenza. I ricercatori del Monero Research Lab (MRL) Brandon “Surae Noether” Goodell e il pseudonimo ‘Sarang Noether’ (che ha collaborato con me alla Sezione \ref{sec:range_proofs} e nel Capitolo \ref{chapter:tx-knowledge-proofs}) sono stati una risorsa affidabile e competente durante lo sviluppo di entrambe le edizioni di Da Zero a Monero. Lo pseudonimo ‘moneromooo’, il più prolifico sviluppatore core del Monero Project, probabilmente ha la più vasta conoscenza del codice sorgente al mondo, e mi ha indicato la strada giusta innumerevoli volte. Naturalmente, molti altri meravigliosi contributori di Monero hanno dedicato tempo a rispondere alle mie infinite domande. Infine, grazie a tutte le persone che ci hanno contattato con suggerimenti di correzione e commenti incoraggianti!
