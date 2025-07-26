@@ -128,7 +128,7 @@ In this scheme we store (1+$n$) integers and use $n$ public keys.
 
 \subsection*{Why it works}
 
-We can informally convince ourselves the algorithm works by going through an example. Consider ring $R = \{K_1, K_2, K_3\}$ with $k_\pi = k_2$. First the signature:
+We can informally convince ourselves the algorithm works by going through an example. Consider ring $\mathcal{R} = \{K_1, K_2, K_3\}$ with $k_\pi = k_2$. First the signature:
 \begin{enumerate}
     \item Generate random numbers: $\alpha$, $r_1$, $r_3$
 \begin{align*}
@@ -376,7 +376,7 @@ The verification of a signature is done in the following manner:
     \end{align*}{}
 
 	\item For \(i = 1, ..., n\) compute, replacing \(n + 1 \rightarrow 1\),\vspace{.175cm}
-	\[c_{i+1} = \mathcal{H}_n(T_c, \mathcal{R}, \mathfrak{m}, [r_i G + c_i W_i], [r_{i} \mathcal{H}_p(K_{i,1}) + c_i \tilde{W}])\]
+	\[c'_{i+1} = \mathcal{H}_n(T_c, \mathcal{R}, \mathfrak{m}, [r_i G + c_i W_i], [r_{i} \mathcal{H}_p(K_{i,1}) + c_i \tilde{W}])\]
 
 	\item If \(c_1 = c'_1\) then the signature is valid.
 \end{enumerate}
