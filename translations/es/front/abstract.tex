@@ -1,0 +1,14 @@
+% this file is called up by main.tex
+% content in this file will be fed into the main document
+
+% ---------------------------------------------------------------------------
+
+Criptografía. Puede parecer que solo los matemáticos e informáticos tienen acceso a este tema misterioso, esotérico, poderoso y elegante. De hecho, muchos tipos de criptografía son lo suficientemente sencillos como para que cualquiera pueda aprender sus conceptos fundamentales.
+\\ \newline
+Casi todo el mundo sabe que la criptografía se usa para proteger las comunicaciones, ya sean cartas codificadas o interacciones digitales privadas. También se aplica en lo que se conoce como criptomonedas. Estas monedas digitales utilizan la criptografía para asignar y transferir la propiedad de los fondos. Para garantizar que ninguna unidad de dinero pueda duplicarse o crearse a voluntad, las criptomonedas suelen basarse en `cadenas de bloque', que son libros de contabilidad públicos y distribuidos que contienen registros de transacciones monetarias que pueden ser verificadas por terceros \cite{Nakamoto_bitcoin}.
+\\ \newline
+A primera vista, podría pensarse que las transacciones deben enviarse y almacenarse en formato de texto plano para que se puedan verificar públicamente. No obstante, es posible ocultar a los participantes de una transacción, así como las cantidades implicadas, utilizando herramientas criptográficas que, sin embargo, permiten que las transacciones sean verificadas y consensuadas por observadores \cite{cryptoNoteWhitePaper}. Esto se ejemplifica en la criptomoneda Monero.
+\\ \newline
+Aquí no solo nos esforzamos en enseñar a cualquiera que sepa álgebra básica y conceptos sencillos de informática como la `representación en bits' de un número cómo funciona Monero a un nivel detallado y exhaustivo, sino también lo útil y hermosa que puede ser la criptografía.
+\\ \newline
+Para nuestros lectores experimentados: Monero es una criptomoneda de cadena de bloque de gráfico acíclico distribuido unidimensional estándar \cite{Nakamoto_bitcoin} en la que las transacciones se basan en criptografía de curva elíptica usando la curva Ed25519 \cite{Bernstein2008}, las entradas de transacciones son firmadas con firmas de grupo anónimas multicapa enlazables espontáneas de tipo Schnorr \cite{MRL-0005-ringct} y las cantidades de salida (comunicadas a los destinatarios a través de ECDH \cite{Diffie-Hellman}) se ocultan con compromisos de Pedersen \cite{maxwell-ct} y se prueban en un rango legítimo con Bulletproofs \cite{Bulletproofs_paper}. En gran medida, la primera parte de este informe se dedica a explicar estas ideas.
